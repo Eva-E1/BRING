@@ -3,55 +3,14 @@ from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
-from .settings import GatewaySettings
+from .settings import GatewaySettings, ProviderSettings
 
 
-class ProviderConfig(BaseModel):
-    name: str = "openai"
-    api_type: Optional[str] = None
-    model_provider: Optional[str] = None
+class ProviderConfig(ProviderSettings):
     api_key: Optional[str] = Field(default=None, env="LLM_API_KEY")
     base_url: Optional[str] = Field(default=None, env="LLM_BASE_URL")
     api_version: Optional[str] = Field(default=None, env="LLM_API_VERSION")
     organization: Optional[str] = Field(default=None, env="LLM_ORGANIZATION")
-    default_headers: Dict[str, str] = Field(default_factory=dict)
-    client_kwargs: Dict[str, Any] = Field(default_factory=dict)
-    request_kwargs: Dict[str, Any] = Field(default_factory=dict)
-    any_llm_kwargs: Dict[str, Any] = Field(default_factory=dict)
-
-    @property
-    def runtime_type(self) -> str:
-        return (self.api_type or self.name).lower()
-
-    @property
-    def any_llm_provider(self) -> str:
-        return self.model_provider or self.name
-
-    def build_any_llm_kwargs(self) -> Dict[str, Any]:
-        kwargs: Dict[str, Any] = dict(self.any_llm_kwargs)
-        if self.api_key is not None:
-            kwargs.setdefault("api_key", self.api_key)
-        if self.base_url is not None:
-            kwargs.setdefault("base_url", self.base_url)
-        if self.api_version is not None:
-            kwargs.setdefault("api_version", self.api_version)
-        if self.organization is not None:
-            kwargs.setdefault("organization", self.organization)
-        if self.default_headers:
-            kwargs.setdefault("default_headers", dict(self.default_headers))
-        return kwargs
-
-    def build_client_kwargs(self) -> Dict[str, Any]:
-        kwargs: Dict[str, Any] = dict(self.client_kwargs)
-        if self.base_url is not None:
-            kwargs.setdefault("base_url", self.base_url)
-        if self.api_version is not None:
-            kwargs.setdefault("api_version", self.api_version)
-        if self.organization is not None:
-            kwargs.setdefault("organization", self.organization)
-        if self.default_headers:
-            kwargs.setdefault("default_headers", dict(self.default_headers))
-        return kwargs
 
 
 class AnyLLMConfig(BaseModel):
@@ -95,6 +54,9 @@ class AnyLLMConfig(BaseModel):
             "client_kwargs": dict(resolved_settings.client_kwargs),
             "request_kwargs": dict(resolved_settings.request_kwargs),
             "extra_kwargs": dict(resolved_settings.any_llm_kwargs),
+            "provider_config": ProviderConfig.model_validate(
+                resolved_settings.provider_settings.model_dump()
+            ),
         }
         payload.update(overrides)
         return cls(**payload)
