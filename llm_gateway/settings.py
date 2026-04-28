@@ -1,59 +1,44 @@
-import os
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional
 
 from pydantic import BaseModel, Field
 
-
-DEFAULT_SETTINGS_FILE = ".llm_gateway.env"
-
-
-def _parse_env_file(path: Path) -> Dict[str, str]:
-    values: Dict[str, str] = {}
-    if not path.exists():
-        return values
-
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        values[key.strip()] = value.strip().strip("'").strip('"')
-    return values
-
-
-def _merge_settings_sources(
-    file_values: Mapping[str, str],
-    env_values: Mapping[str, str],
-) -> Dict[str, str]:
-    merged = dict(file_values)
-    for key, value in env_values.items():
-        if value:
-            merged[key] = value
-    return merged
-
-
-def _read_str(merged: Mapping[str, str], *keys: str, default: Optional[str] = None) -> Optional[str]:
-    for key in keys:
-        value = merged.get(key)
-        if value not in (None, ""):
-            return value
-    return default
-
-
-def _read_int(merged: Mapping[str, str], *keys: str, default: int) -> int:
-    value = _read_str(merged, *keys)
-    return int(value) if value is not None else default
-
-
-def _read_float(merged: Mapping[str, str], *keys: str, default: float) -> float:
-    value = _read_str(merged, *keys)
-    return float(value) if value is not None else default
+from bring_settings import (
+    DEFAULT_SETTINGS_FILE,
+    load_settings,
+    read_float,
+    read_int,
+    read_str,
+)
 
 
 class EmbeddingSettings(BaseModel):
     model: str = "text-embedding-3-small"
     dimensions: int = 1536
+    provider: str = "openai"
+    api_type: Optional[str] = None
+    api_key: Optional[str] = None
+    base_url: Optional[str] = None
+    api_version: Optional[str] = None
+    organization: Optional[str] = None
+    default_headers: Dict[str, str] = Field(default_factory=dict)
+    client_kwargs: Dict[str, Any] = Field(default_factory=dict)
+
+    @property
+    def runtime_type(self) -> str:
+        return (self.api_type or self.provider).lower()
+
+    def build_client_kwargs(self) -> Dict[str, Any]:
+        kwargs: Dict[str, Any] = dict(self.client_kwargs)
+        if self.base_url is not None:
+            kwargs.setdefault("base_url", self.base_url)
+        if self.api_version is not None:
+            kwargs.setdefault("api_version", self.api_version)
+        if self.organization is not None:
+            kwargs.setdefault("organization", self.organization)
+        if self.default_headers:
+            kwargs.setdefault("default_headers", dict(self.default_headers))
+        return kwargs
 
 
 class ProviderSettings(BaseModel):
@@ -118,44 +103,80 @@ class GatewaySettings(BaseModel):
         *,
         env: Optional[Mapping[str, str]] = None,
     ) -> "GatewaySettings":
-        settings_path = Path(path or os.getenv("LLM_GATEWAY_SETTINGS_FILE", DEFAULT_SETTINGS_FILE))
-        file_values = _parse_env_file(settings_path)
-        runtime_env = env if env is not None else os.environ
-        merged = _merge_settings_sources(file_values, runtime_env)
+        merged = load_settings(
+            path,
+            env=env,
+            env_var_names=("BRING_SETTINGS_FILE",),
+            default_files=(DEFAULT_SETTINGS_FILE,),
+        )
 
         provider_settings = ProviderSettings(
-            name=_read_str(merged, "LLM_PROVIDER", default=ProviderSettings.model_fields["name"].default),
-            api_type=_read_str(merged, "LLM_PROVIDER_TYPE"),
-            model_provider=_read_str(merged, "LLM_MODEL_PROVIDER"),
-            api_key=_read_str(merged, "LLM_API_KEY"),
-            base_url=_read_str(merged, "LLM_BASE_URL"),
-            api_version=_read_str(merged, "LLM_API_VERSION"),
-            organization=_read_str(merged, "LLM_ORGANIZATION"),
+            name=read_str(merged, "LLM_PROVIDER", default=ProviderSettings.model_fields["name"].default),
+            api_type=read_str(merged, "LLM_PROVIDER_TYPE"),
+            model_provider=read_str(merged, "LLM_MODEL_PROVIDER"),
+            api_key=read_str(merged, "LLM_API_KEY"),
+            base_url=read_str(merged, "LLM_BASE_URL"),
+            api_version=read_str(merged, "LLM_API_VERSION"),
+            organization=read_str(merged, "LLM_ORGANIZATION"),
             embedding=EmbeddingSettings(
-                model=_read_str(
+                model=read_str(
                     merged,
                     "LLM_EMBEDDING_MODEL",
                     "MEMORY_EMBEDDING_MODEL",
                     default=EmbeddingSettings.model_fields["model"].default,
                 ),
-                dimensions=_read_int(
+                dimensions=read_int(
                     merged,
                     "LLM_EMBEDDING_DIM",
                     "MEMORY_EMBEDDING_DIM",
                     default=EmbeddingSettings.model_fields["dimensions"].default,
+                ),
+                provider=read_str(
+                    merged,
+                    "LLM_EMBEDDING_PROVIDER",
+                    default=read_str(
+                        merged,
+                        "LLM_PROVIDER",
+                        default=EmbeddingSettings.model_fields["provider"].default,
+                    ),
+                ),
+                api_type=read_str(
+                    merged,
+                    "LLM_EMBEDDING_PROVIDER_TYPE",
+                    default=read_str(merged, "LLM_PROVIDER_TYPE"),
+                ),
+                api_key=read_str(
+                    merged,
+                    "LLM_EMBEDDING_API_KEY",
+                    default=read_str(merged, "LLM_API_KEY"),
+                ),
+                base_url=read_str(
+                    merged,
+                    "LLM_EMBEDDING_BASE_URL",
+                    default=read_str(merged, "LLM_BASE_URL"),
+                ),
+                api_version=read_str(
+                    merged,
+                    "LLM_EMBEDDING_API_VERSION",
+                    default=read_str(merged, "LLM_API_VERSION"),
+                ),
+                organization=read_str(
+                    merged,
+                    "LLM_EMBEDDING_ORGANIZATION",
+                    default=read_str(merged, "LLM_ORGANIZATION"),
                 ),
             ),
         )
 
         return cls(
             provider_settings=provider_settings,
-            model=_read_str(merged, "LLM_MODEL", default=cls.model_fields["model"].default),
-            temperature=_read_float(
+            model=read_str(merged, "LLM_MODEL", default=cls.model_fields["model"].default),
+            temperature=read_float(
                 merged,
                 "LLM_TEMPERATURE",
                 default=cls.model_fields["temperature"].default,
             ),
-            max_tokens=_read_int(
+            max_tokens=read_int(
                 merged,
                 "LLM_MAX_TOKENS",
                 default=cls.model_fields["max_tokens"].default,
@@ -211,6 +232,9 @@ class GatewaySettings(BaseModel):
         provider_settings = data.get("provider_settings", {})
         if provider_settings.get("api_key"):
             provider_settings["api_key"] = "***"
+        embedding_settings = provider_settings.get("embedding", {})
+        if embedding_settings.get("api_key"):
+            embedding_settings["api_key"] = "***"
         data.update(
             {
                 "provider": self.provider,

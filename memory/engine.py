@@ -5,12 +5,15 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Mapping, Optional
 from uuid import uuid4
+
+from pydantic import BaseModel
 
 from llm_gateway.client import LLMClient
 
 from .config import MemorySettings, get_settings
+from .database import MemoryDatabaseManager
 from .extraction import structured_extraction
 from .graph import MemoryGraph
 from .maintenance import MemoryMaintenance
@@ -21,9 +24,14 @@ logger = logging.getLogger(__name__)
 class MemoryEngine:
     """Entry point for the BRING memory system."""
 
-    def __init__(self, settings: Optional[MemorySettings] = None):
+    def __init__(
+        self,
+        settings: Optional[MemorySettings] = None,
+        *,
+        entity_types: Optional[Mapping[str, type[BaseModel]]] = None,
+    ):
         self.settings = settings or get_settings()
-        self._graph = MemoryGraph(self.settings)
+        self._graph = MemoryGraph(self.settings, entity_types=entity_types)
         self._maintenance = MemoryMaintenance(self.settings)
         self._gateway: Optional[LLMClient] = None
         self._started = False
@@ -34,8 +42,13 @@ class MemoryEngine:
 
         self._gateway = gateway
         await self._graph.start(gateway)
+        self._graph.database_manager.write_manifest(gateway=gateway)
         self._started = True
-        logger.info("Memory engine started (Kuzu at %s)", self.settings.kuzu_db_path)
+        logger.info(
+            "Memory engine started (database=%s, Kuzu at %s)",
+            self.settings.normalized_database_id,
+            self.settings.database_path,
+        )
 
     async def stop(self) -> None:
         await self._graph.close()
@@ -51,6 +64,20 @@ class MemoryEngine:
         if self._gateway is None:
             raise RuntimeError("Memory engine not started.")
         return self._gateway
+
+    @property
+    def database_manager(self) -> MemoryDatabaseManager:
+        return self._graph.database_manager
+
+    @property
+    def entity_types(self) -> dict[str, type[BaseModel]]:
+        return self._graph.entity_types
+
+    def export_database(self, destination: Optional[str] = None) -> str:
+        return str(self.database_manager.export_archive(destination))
+
+    def clone_database(self, database_id: str) -> MemoryDatabaseManager:
+        return self.database_manager.clone_database(database_id)
 
     async def add_episodes_bulk(
         self,
@@ -68,6 +95,7 @@ class MemoryEngine:
                     reference_time=episode.reference_time,
                     group_id=episode.group_id,
                     uuid=episode.uuid,
+                    metadata=episode.metadata,
                 )
 
         await asyncio.gather(*(ingest_one(episode) for episode in prepared))
@@ -79,20 +107,28 @@ class MemoryEngine:
         reference_time: datetime,
         group_id: str = "default",
         uuid: Optional[str] = None,
+        metadata: Optional[dict] = None,
     ) -> str:
-        extraction_fn = None
-        if self.settings.use_structured_extraction:
-            async def extraction_fn(payload: str):
-                return await structured_extraction(payload, self.gateway)
-
         episode_uuid = uuid or str(uuid4())
+        source_description = "BRING memory ingestion"
+        if metadata:
+            volume = metadata.get("volume")
+            chapter = metadata.get("chapter")
+            parts = [source_description]
+            if volume is not None:
+                parts.append(f"volume={volume}")
+            if chapter is not None:
+                parts.append(f"chapter={chapter}")
+            source_description = ", ".join(parts)
+
         await self.graphiti.add_episode(
             name=name,
             episode_body=body,
+            source_description=source_description,
             reference_time=reference_time,
             group_id=group_id,
             uuid=episode_uuid,
-            extraction_function=extraction_fn,
+            entity_types=self.entity_types,
         )
         self._maintenance.invalidate_search_cache()
         return episode_uuid

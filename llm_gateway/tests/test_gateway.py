@@ -54,7 +54,7 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
     def write_settings_file(self, contents: str) -> Path:
         temp_dir = tempfile.TemporaryDirectory()
         self.addCleanup(temp_dir.cleanup)
-        settings_path = Path(temp_dir.name) / ".llm_gateway.env"
+        settings_path = Path(temp_dir.name) / ".bring.env"
         settings_path.write_text(contents, encoding="utf-8")
         return settings_path
 
@@ -138,7 +138,7 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
             )
         )
 
-        with patch.dict(os.environ, {"LLM_GATEWAY_SETTINGS_FILE": str(settings_path)}, clear=False):
+        with patch.dict(os.environ, {"BRING_SETTINGS_FILE": str(settings_path)}, clear=False):
             client = LLMClient()
 
         self.assertEqual(client.config.provider, "default-shared-gateway")

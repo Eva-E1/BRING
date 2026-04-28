@@ -24,7 +24,7 @@ class GatewayAndMemorySettingsTests(unittest.IsolatedAsyncioTestCase):
     def write_settings_file(self, contents: str) -> Path:
         temp_dir = tempfile.TemporaryDirectory()
         self.addCleanup(temp_dir.cleanup)
-        settings_path = Path(temp_dir.name) / ".llm_gateway.env"
+        settings_path = Path(temp_dir.name) / ".bring.env"
         settings_path.write_text(contents, encoding="utf-8")
         return settings_path
 
@@ -43,11 +43,64 @@ class GatewayAndMemorySettingsTests(unittest.IsolatedAsyncioTestCase):
         )
 
         settings = GatewaySettings.from_file(settings_path)
+        memory_settings = MemorySettings.from_file(settings_path)
 
         self.assertEqual(settings.provider, "team-gateway")
         self.assertEqual(settings.provider_settings.embedding.model, "text-embedding-3-large")
         self.assertEqual(settings.provider_settings.embedding.dimensions, 3072)
         self.assertEqual(settings.masked_dict()["provider_settings"]["api_key"], "***")
+        self.assertEqual(memory_settings.database_path, Path("./memory_databases/default/kuzu"))
+
+    async def test_embedding_settings_can_use_separate_provider_credentials(self):
+        settings_path = self.write_settings_file(
+            "\n".join(
+                [
+                    "LLM_PROVIDER=main-gateway",
+                    "LLM_PROVIDER_TYPE=anthropic",
+                    "LLM_API_KEY=main-secret",
+                    "LLM_BASE_URL=https://main.example/v1",
+                    "LLM_EMBEDDING_PROVIDER=embed-gateway",
+                    "LLM_EMBEDDING_PROVIDER_TYPE=openai",
+                    "LLM_EMBEDDING_MODEL=text-embedding-3-large",
+                    "LLM_EMBEDDING_API_KEY=embed-secret",
+                    "LLM_EMBEDDING_BASE_URL=https://embed.example/v1",
+                    "LLM_EMBEDDING_DIM=3072",
+                ]
+            )
+        )
+
+        settings = GatewaySettings.from_file(settings_path)
+
+        self.assertEqual(settings.provider, "main-gateway")
+        self.assertEqual(settings.provider_settings.runtime_type, "anthropic")
+        self.assertEqual(settings.provider_settings.embedding.provider, "embed-gateway")
+        self.assertEqual(settings.provider_settings.embedding.runtime_type, "openai")
+        self.assertEqual(settings.provider_settings.embedding.api_key, "embed-secret")
+        self.assertEqual(
+            settings.provider_settings.embedding.build_client_kwargs()["base_url"],
+            "https://embed.example/v1",
+        )
+        self.assertEqual(settings.masked_dict()["provider_settings"]["embedding"]["api_key"], "***")
+
+    async def test_memory_settings_load_from_shared_root_file(self):
+        settings_path = self.write_settings_file(
+            "\n".join(
+                [
+                    "MEMORY_KUZU_DB_PATH=./tmp-story-db",
+                    "MEMORY_GRAPHITI_STORE_RAW_EPISODES=false",
+                    "MEMORY_BULK_BATCH=7",
+                    "MEMORY_SEARCH_CACHE_TTL_SECONDS=300",
+                ]
+            )
+        )
+
+        settings = MemorySettings.from_file(settings_path)
+
+        self.assertEqual(settings.kuzu_db_path, Path("./tmp-story-db"))
+        self.assertEqual(settings.database_path, Path("./tmp-story-db"))
+        self.assertFalse(settings.graphiti_store_raw_episodes)
+        self.assertEqual(settings.bulk_ingestion_batch_size, 7)
+        self.assertEqual(settings.search_cache_ttl_seconds, 300)
 
     async def test_memory_maintenance_deduplicates_and_limits_results(self):
         maintenance = MemoryMaintenance(

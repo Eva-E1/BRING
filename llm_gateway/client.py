@@ -37,9 +37,9 @@ class LLMClient:
     """
     Single-entry LLM gateway.
 
-    Plain text goes through any-llm. Structured output uses Instructor with the
-    same provider/model configuration and falls back to schema-guided prompting
-    when Instructor is unavailable for the selected provider.
+    Plain text uses an OpenAI-style client (supports any OpenAI-compatible endpoint).
+    Structured output uses Instructor with the same provider/model configuration and
+    falls back to schema-guided prompting when Instructor is unavailable.
     """
 
     def __init__(
@@ -54,7 +54,9 @@ class LLMClient:
         self._enable_cache = enable_cache
         self._retry = build_retry_decorator(max_retries)
         self._instructor_client: Any = None
+        self._plain_client: Any = None
         self._instructor_lock = asyncio.Lock()
+        self._plain_lock = asyncio.Lock()
 
     @classmethod
     def from_settings(
@@ -79,24 +81,67 @@ class LLMClient:
             max_retries=max_retries,
         )
 
-    @staticmethod
-    def _sync_any_llm_call(prompt: str, config: AnyLLMConfig) -> str:
-        import any_llm
+    async def _get_plain_client(self) -> Any:
+        """Return an AsyncOpenAI (or AsyncAzureOpenAI) client for plain text calls."""
+        if self._plain_client is not None:
+            return self._plain_client
 
-        any_llm_kwargs = config.provider_settings.build_any_llm_kwargs()
-        any_llm.init(
-            model=config.model_id,
-            temperature=config.temperature,
-            max_tokens=config.max_tokens,
-            **any_llm_kwargs,
-        )
-        return any_llm.ask(prompt)
+        async with self._plain_lock:
+            if self._plain_client is not None:
+                return self._plain_client
+
+            provider = self.config.runtime_provider
+            provider_settings = self.config.provider_settings
+            client_kwargs = provider_settings.build_client_kwargs()
+
+            if provider in {"openai", "azure"}:
+                import openai
+
+                if provider == "azure":
+                    self._plain_client = openai.AsyncAzureOpenAI(
+                        api_key=provider_settings.api_key,
+                        **client_kwargs,
+                    )
+                else:
+                    self._plain_client = openai.AsyncOpenAI(
+                        api_key=provider_settings.api_key,
+                        **client_kwargs,
+                    )
+            elif provider == "anthropic":
+                import openai
+
+                logger.warning(
+                    "Provider '%s' is not OpenAI-compatible; attempting to use AsyncOpenAI anyway.",
+                    provider,
+                )
+                self._plain_client = openai.AsyncOpenAI(
+                    api_key=provider_settings.api_key,
+                    **client_kwargs,
+                )
+            else:
+                import openai
+
+                self._plain_client = openai.AsyncOpenAI(
+                    api_key=provider_settings.api_key,
+                    **client_kwargs,
+                )
+            return self._plain_client
 
     async def _text_call(self, prompt: str) -> str:
         @self._retry
         async def _attempt() -> str:
             try:
-                return await asyncio.to_thread(self._sync_any_llm_call, prompt, self.config)
+                client = await self._get_plain_client()
+                resp = await client.chat.completions.create(
+                    model=self.config.model,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=self.config.temperature,
+                    max_tokens=self.config.max_tokens,
+                )
+                content = resp.choices[0].message.content
+                if content is None:
+                    raise EmptyResponseError("LLM returned empty content")
+                return content
             except Exception as exc:
                 err = str(exc).lower()
                 if "rate limit" in err:

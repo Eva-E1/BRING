@@ -20,6 +20,7 @@ class EpisodeRecord:
     reference_time: datetime
     group_id: str = "default"
     uuid: Optional[str] = None
+    metadata: Optional[dict] = None
 
     @classmethod
     def from_mapping(cls, payload: Mapping[str, object], default_group_id: str) -> "EpisodeRecord":
@@ -29,6 +30,7 @@ class EpisodeRecord:
             reference_time=payload["reference_time"],
             group_id=str(payload.get("group_id", default_group_id)),
             uuid=str(payload["uuid"]) if payload.get("uuid") else None,
+            metadata=dict(payload.get("metadata", {})) if payload.get("metadata") else None,
         )
 
     @property
@@ -39,6 +41,7 @@ class EpisodeRecord:
                 self.name.strip(),
                 self.body.strip(),
                 self.reference_time.isoformat(),
+                json.dumps(self.metadata or {}, sort_keys=True, default=str),
             ]
         )
         return hashlib.md5(raw.encode("utf-8")).hexdigest()
@@ -139,4 +142,4 @@ class MemoryMaintenance:
         return str(value)
 
     def _scoped_cache_key(self, cache_key: str) -> str:
-        return f"{self._cache_generation}:{cache_key}"
+        return f"{self._settings.normalized_database_id}:{self._cache_generation}:{cache_key}"

@@ -1,6 +1,7 @@
 """BRING Memory & Graph - public API."""
 
 from .config import MemorySettings, get_settings
+from .database import DatabaseManifest, MemoryDatabaseManager
 from .ontology import (
     Character,
     Event,
@@ -27,11 +28,13 @@ __all__ = [
     "LocatedAt",
     "Location",
     "MemberOf",
+    "MemoryDatabaseManager",
     "MemoryEngine",
     "MemorySettings",
     "OccurredAt",
     "ParticipatedIn",
     "Possesses",
+    "DatabaseManifest",
     "get_settings",
 ]
 
