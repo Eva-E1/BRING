@@ -146,7 +146,7 @@ The project is being developed with a modular architecture and a strong separati
 ### Installation
 
 ```bash
-git clone https://github.com/your-org/BRING.git
+git clone https://github.com/appleblack2062-eng/BRING.git
 cd BRING
 pip install -r requirements.txt
 ```
