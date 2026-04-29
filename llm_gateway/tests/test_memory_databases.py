@@ -7,7 +7,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from memory.config import MemorySettings
 from memory.database import MemoryDatabaseManager
+from memory.ontology import ENTITY_TYPES
 from mushoku_tensei.graph_builder import build_layered_graph
+from mushoku_tensei.ontology_extended import ENTITY_TYPES_EXTENDED
 
 
 class MemoryDatabaseTests(unittest.TestCase):
@@ -76,6 +78,16 @@ class MemoryDatabaseTests(unittest.TestCase):
         self.assertEqual(payload[0]["metadata"]["chapter"], 1)
         self.assertEqual(payload[0]["metadata"]["time_markers"], ["Rudeus is 5 years old"])
         self.assertEqual(payload[0]["metadata"]["entities"][0]["attributes"]["layer"], "fact")
+
+    def test_entity_type_models_do_not_use_graphiti_reserved_fields(self):
+        reserved = {"uuid", "name", "group_id", "labels", "created_at", "name_embedding", "summary", "attributes"}
+
+        for registry in (ENTITY_TYPES, ENTITY_TYPES_EXTENDED):
+            for entity_name, entity_model in registry.items():
+                self.assertTrue(
+                    reserved.isdisjoint(entity_model.model_fields.keys()),
+                    msg=f"{entity_name} uses reserved Graphiti fields",
+                )
 
 
 if __name__ == "__main__":

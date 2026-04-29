@@ -24,7 +24,6 @@ from memory.ontology import (
 
 class Ability(BaseModel):
     """Skills, magic, techniques."""
-    name: str = Field(..., description="Ability name")
     category: Optional[str] = None   # attack, healing, summoning, barrier, unique ...
     description: Optional[str] = None
     prerequisites: Optional[str] = None
@@ -32,29 +31,25 @@ class Ability(BaseModel):
 
 class WorldRule(BaseModel):
     """World‑building rules, laws of magic, racial traits, etc."""
-    name: str = Field(..., description="Rule name")
     category: Optional[str] = None   # magic_system, racial_trait, historical_law, geography
     description: Optional[str] = None
 
 
 class HistoricalEvent(BaseModel):
     """Large‑scale past events (e.g. Laplace War)."""
-    name: str = Field(..., description="Historical event name")
     year_start: Optional[int] = None
     year_end: Optional[int] = None
-    summary: Optional[str] = None
+    description: Optional[str] = None
 
 
 class Arc(BaseModel):
     """Story arc / volume identification."""
-    name: str = Field(..., description="Arc name")
     volume: Optional[int] = None
     description: Optional[str] = None
 
 
 class Concept(BaseModel):
     """Abstract themes like 'reincarnation', 'destiny', 'family'."""
-    name: str = Field(..., description="Concept name")
     description: Optional[str] = None
 
 

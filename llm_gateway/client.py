@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, Type
 
-from .cache import AsyncTTLCache
+from .cache import AsyncTTLCache, default_cache_dir
 from .config import AnyLLMConfig
 from .exceptions import (
     ConfigurationError,
@@ -50,7 +50,11 @@ class LLMClient:
         max_retries: int = 3,
     ):
         self.config = config or AnyLLMConfig.from_settings()
-        self._cache = cache or AsyncTTLCache()
+        self._cache = cache or AsyncTTLCache(
+            ttl=7 * 24 * 3600,
+            maxsize=4096,
+            persist_dir=default_cache_dir(),
+        )
         self._enable_cache = enable_cache
         self._retry = build_retry_decorator(max_retries)
         self._instructor_client: Any = None

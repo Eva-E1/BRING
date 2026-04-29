@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from datetime import datetime
 from typing import Mapping, Optional
@@ -84,21 +83,16 @@ class MemoryEngine:
         episodes: list[dict],
         group_id: str = "default",
     ) -> None:
-        semaphore = asyncio.Semaphore(self.settings.bulk_ingestion_batch_size)
         prepared = self._maintenance.prepare_episode_batch(episodes, group_id)
-
-        async def ingest_one(episode):
-            async with semaphore:
-                await self._add_single_episode(
-                    name=episode.name,
-                    body=episode.body,
-                    reference_time=episode.reference_time,
-                    group_id=episode.group_id,
-                    uuid=episode.uuid,
-                    metadata=episode.metadata,
-                )
-
-        await asyncio.gather(*(ingest_one(episode) for episode in prepared))
+        for episode in prepared:
+            await self._add_single_episode(
+                name=episode.name,
+                body=episode.body,
+                reference_time=episode.reference_time,
+                group_id=episode.group_id,
+                uuid=episode.uuid,
+                metadata=episode.metadata,
+            )
 
     async def _add_single_episode(
         self,

@@ -10,7 +10,6 @@ from pydantic import BaseModel, Field
 # ════════════════════════════════════════════════════════
 
 class Character(BaseModel):
-    name: str = Field(..., description="Character's full name")
     alias: Optional[str] = None
     role: Optional[str] = None
     description: Optional[str] = None
@@ -18,26 +17,22 @@ class Character(BaseModel):
 
 
 class Location(BaseModel):
-    name: str = Field(..., description="Location name")
     type: Optional[str] = None
     description: Optional[str] = None
     region: Optional[str] = None
 
 
 class Item(BaseModel):
-    name: str = Field(..., description="Item name")
     type: Optional[str] = None
     description: Optional[str] = None
 
 
 class Event(BaseModel):
-    name: str = Field(..., description="Event name")
     description: Optional[str] = None
     event_type: Optional[str] = None  # battle, discovery, betrayal, ...
 
 
 class Faction(BaseModel):
-    name: str = Field(..., description="Faction name")
     description: Optional[str] = None
 
 

@@ -28,5 +28,5 @@ and builds a multi-layer graph database optimized for the BRING memory engine.
    ```
 
 The ingester uses the shared `llm_gateway` configuration, registers the extended
-Mushoku ontology with `memory`, preserves precomputed extraction results during
+Mushoku ontology with `memory`, preserves precomputed extraction metadata alongside
 ingestion, and exports a reusable database archive when it finishes.
