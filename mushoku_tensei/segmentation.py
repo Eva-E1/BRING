@@ -133,11 +133,12 @@ def _split_section_into_units(
                 buffer_len = 0
 
     if buffer:
-        if units and len("\n\n".join(buffer).strip()) < min_chunk_chars:
-            merged = f"{units.pop()}\n\n{'\n\n'.join(buffer).strip()}".strip()
+        buffered_text = "\n\n".join(buffer).strip()
+        if units and len(buffered_text) < min_chunk_chars:
+            merged = f"{units.pop()}\n\n{buffered_text}".strip()
             units.extend(_rebalance_oversized_unit(merged, max_chunk_chars))
         else:
-            units.append("\n\n".join(buffer).strip())
+            units.append(buffered_text)
 
     return [unit for unit in units if unit]
 
@@ -160,6 +161,14 @@ def _split_long_paragraph(paragraph: str, max_chunk_chars: int) -> List[str]:
     current: List[str] = []
     current_len = 0
     for sentence in sentences:
+        if len(sentence) > max_chunk_chars:
+            if current:
+                units.append(" ".join(current).strip())
+                current = []
+                current_len = 0
+            units.extend(_hard_wrap_text(sentence, max_chunk_chars))
+            continue
+
         projected = current_len + len(sentence) + (1 if current else 0)
         if current and projected > max_chunk_chars:
             units.append(" ".join(current).strip())
@@ -182,6 +191,14 @@ def _hard_wrap_text(text: str, max_chunk_chars: int) -> List[str]:
     current: List[str] = []
     current_len = 0
     for word in words:
+        if len(word) > max_chunk_chars:
+            if current:
+                chunks.append(" ".join(current).strip())
+                current = []
+                current_len = 0
+            chunks.extend(word[index : index + max_chunk_chars] for index in range(0, len(word), max_chunk_chars))
+            continue
+
         projected = current_len + len(word) + (1 if current else 0)
         if current and projected > max_chunk_chars:
             chunks.append(" ".join(current).strip())

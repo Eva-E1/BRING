@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from llm_gateway.client import LLMClient
 from llm_gateway.config import AnyLLMConfig, ProviderConfig
+from llm_gateway.exceptions import LLMGatewayError, RateLimitError
 from llm_gateway.settings import GatewaySettings
 
 
@@ -190,6 +191,8 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
             client = self.build_client(enable_cache=True)
             text_calls = []
             structured_calls = []
+            plain_prompt = f"Summarize the request {time.time_ns()}"
+            structured_prompt = f"Extract Jane, 28 {time.time_ns()}"
 
             async def fake_text_call(prompt: str) -> str:
                 text_calls.append(prompt)
@@ -202,10 +205,10 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
             client._text_call = fake_text_call
             client._structured_call = fake_structured_call
 
-            first = await client.generate("Summarize the request")
-            second = await client.generate("Summarize the request")
-            third = await client.generate("Extract Jane, 28", response_model=Person)
-            fourth = await client.generate("Extract Jane, 28", response_model=Person)
+            first = await client.generate(plain_prompt)
+            second = await client.generate(plain_prompt)
+            third = await client.generate(structured_prompt, response_model=Person)
+            fourth = await client.generate(structured_prompt, response_model=Person)
 
         logger.info(
             "smoke results | first=%s second_provider=%s third=%s fourth_provider=%s",
@@ -218,8 +221,8 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(second.provider, "cache")
         self.assertEqual(third.text, '{"name":"Jane","age":28}')
         self.assertEqual(fourth.provider, "cache")
-        self.assertEqual(text_calls, ["Summarize the request"])
-        self.assertEqual(structured_calls, [("Extract Jane, 28", Person)])
+        self.assertEqual(text_calls, [plain_prompt])
+        self.assertEqual(structured_calls, [(structured_prompt, Person)])
 
     async def test_structured_generation_falls_back_to_schema_prompt_for_custom_provider(self):
         with self.log_timing("schema fallback path"):
@@ -242,6 +245,187 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.provider, "custom-ollama")
         self.assertIn("Please respond with JSON that matches this schema", calls[0])
         self.assertIn('"name"', calls[0])
+
+    async def test_local_openai_compatible_endpoint_bypasses_instructor(self):
+        client = self.build_client(
+            provider="openai",
+            provider_type="openai",
+            model="gemma-4-E2B-it-Q4_K_M",
+            base_url="http://127.0.0.1:8080/v1",
+            enable_cache=False,
+        )
+        text_calls = []
+
+        async def fake_text_call(prompt: str) -> str:
+            text_calls.append(prompt)
+            return '{"name":"Jane","age":28}'
+
+        async def fake_structured_call(prompt: str, response_model):
+            raise AssertionError("Instructor should be bypassed for local endpoints")
+
+        client._text_call = fake_text_call
+        client._structured_call = fake_structured_call
+
+        response = await client.generate("Extract Jane, 28", response_model=Person)
+
+        self.assertEqual(response.text, '{"name":"Jane","age":28}')
+        self.assertEqual(len(text_calls), 1)
+        self.assertIn("Please respond with JSON that matches this schema", text_calls[0])
+
+    async def test_custom_openai_compatible_remote_endpoint_bypasses_instructor(self):
+        client = self.build_client(
+            provider="openai",
+            provider_type="openai",
+            model="llama-3.1-8b-instruct",
+            base_url="https://gateway.internal.example/v1",
+            enable_cache=False,
+        )
+        text_calls = []
+
+        async def fake_text_call(prompt: str) -> str:
+            text_calls.append(prompt)
+            return '{"name":"Jane","age":28}'
+
+        async def fake_structured_call(prompt: str, response_model):
+            raise AssertionError("Instructor should be bypassed for custom OpenAI-compatible endpoints")
+
+        client._text_call = fake_text_call
+        client._structured_call = fake_structured_call
+
+        response = await client.generate("Extract Jane, 28", response_model=Person)
+
+        self.assertEqual(response.text, '{"name":"Jane","age":28}')
+        self.assertEqual(len(text_calls), 1)
+        self.assertIn("Return only valid JSON", text_calls[0])
+
+    async def test_tool_fragile_model_name_bypasses_instructor_even_without_custom_base_url(self):
+        client = self.build_client(
+            provider="openai",
+            provider_type="openai",
+            model="qwen2.5-7b-instruct",
+            enable_cache=False,
+        )
+        text_calls = []
+
+        async def fake_text_call(prompt: str) -> str:
+            text_calls.append(prompt)
+            return '{"name":"Jane","age":28}'
+
+        async def fake_structured_call(prompt: str, response_model):
+            raise AssertionError("Instructor should be bypassed for tool-fragile model families")
+
+        client._text_call = fake_text_call
+        client._structured_call = fake_structured_call
+
+        response = await client.generate("Extract Jane, 28", response_model=Person)
+
+        self.assertEqual(response.text, '{"name":"Jane","age":28}')
+        self.assertEqual(len(text_calls), 1)
+        self.assertIn("Please respond with JSON that matches this schema", text_calls[0])
+
+    async def test_structured_generation_retries_with_schema_prompt_after_instructor_failure(self):
+        client = self.build_client(enable_cache=False)
+        text_calls = []
+        structured_calls = []
+
+        async def fake_structured_call(prompt: str, response_model):
+            structured_calls.append((prompt, response_model))
+            raise LLMGatewayError("Instructor structured call failed: tool call mismatch")
+
+        async def fake_text_call(prompt: str) -> str:
+            text_calls.append(prompt)
+            return '```json\n{"name":"Jane","age":28}\n```'
+
+        client._structured_call = fake_structured_call
+        client._text_call = fake_text_call
+
+        response = await client.generate("Extract Jane, 28", response_model=Person)
+
+        self.assertEqual(response.text, '{"name":"Jane","age":28}')
+        self.assertEqual(structured_calls, [("Extract Jane, 28", Person)])
+        self.assertEqual(len(text_calls), 1)
+        self.assertIn("Please respond with JSON that matches this schema", text_calls[0])
+
+    async def test_schema_guided_generation_repairs_invalid_json_from_weaker_model(self):
+        client = self.build_client(
+            provider="custom-ollama",
+            provider_type="ollama",
+            model="llama3",
+            enable_cache=False,
+        )
+        text_calls = []
+
+        async def fake_text_call(prompt: str) -> str:
+            text_calls.append(prompt)
+            if len(text_calls) == 1:
+                return 'Sure — {"name":"Jane"}'
+            return '{"name":"Jane","age":28}'
+
+        client._text_call = fake_text_call
+
+        response = await client.generate("Extract Jane, 28", response_model=Person)
+
+        self.assertEqual(response.text, '{"name":"Jane","age":28}')
+        self.assertEqual(len(text_calls), 2)
+        self.assertIn("Repair it and return only valid JSON", text_calls[1])
+
+    async def test_schema_guided_generation_raises_after_failed_repair(self):
+        client = self.build_client(
+            provider="custom-ollama",
+            provider_type="ollama",
+            model="llama3",
+            enable_cache=False,
+        )
+
+        async def fake_text_call(prompt: str) -> str:
+            return '{"name":"Jane"}'
+
+        client._text_call = fake_text_call
+
+        with self.assertRaisesRegex(LLMGatewayError, "invalid JSON after repair attempt"):
+            await client.generate("Extract Jane, 28", response_model=Person)
+
+    async def test_calibrate_parallelism_finds_stable_provider_capacity(self):
+        client = self.build_client(enable_cache=False)
+        active_calls = 0
+        peak_active_calls = 0
+
+        async def fake_text_call(prompt: str) -> str:
+            nonlocal active_calls, peak_active_calls
+            active_calls += 1
+            peak_active_calls = max(peak_active_calls, active_calls)
+            try:
+                if active_calls > 3:
+                    raise RateLimitError("too many concurrent requests")
+                await asyncio.sleep(0.01)
+                return "OK"
+            finally:
+                active_calls -= 1
+
+        client._text_call = fake_text_call
+
+        parallelism = await client.calibrate_parallelism(max_parallelism=5, samples_per_level=1)
+
+        self.assertEqual(parallelism, 3)
+        self.assertEqual(client.recommended_parallelism, 3)
+        self.assertGreaterEqual(peak_active_calls, 3)
+
+    async def test_runtime_metrics_track_adaptive_parallelism(self):
+        client = self.build_client(enable_cache=False)
+        client.configure_parallelism(initial=2, maximum=4)
+
+        async def fake_text_call(prompt: str) -> str:
+            await asyncio.sleep(0)
+            return "OK"
+
+        client._text_call = fake_text_call
+
+        await asyncio.gather(*(client.generate(f"ping {index}") for index in range(4)))
+        metrics = client.runtime_metrics()
+
+        self.assertGreaterEqual(metrics.successes, 4)
+        self.assertGreaterEqual(metrics.current_parallelism, 2)
+        self.assertEqual(metrics.failures, 0)
 
 
 if __name__ == "__main__":

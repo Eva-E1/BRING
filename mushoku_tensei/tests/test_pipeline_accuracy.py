@@ -6,7 +6,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from mushoku_tensei.graph_builder import determine_edge_layer, determine_entity_layer
-from mushoku_tensei.segmentation import segment_text
+from mushoku_tensei.extraction_v2 import _split_long_text
+from mushoku_tensei.segmentation import _split_long_paragraph, segment_text
 from mushoku_tensei.time_parser import estimate_story_time
 
 
@@ -70,6 +71,22 @@ class MushokuPipelineAccuracyTests(unittest.TestCase):
             ],
         )
         self.assertEqual(story_time.year, 5)
+
+    def test_split_long_paragraph_hard_wraps_oversized_sentences(self):
+        paragraph = ("A" * 950) + ". short."
+
+        chunks = _split_long_paragraph(paragraph, 900)
+
+        self.assertEqual(chunks[-1], "short.")
+        self.assertTrue(all(len(chunk) <= 900 for chunk in chunks))
+
+    def test_split_long_text_hard_wraps_oversized_sentences(self):
+        text = ("A" * 750) + ". short."
+
+        chunks = _split_long_text(text, 700)
+
+        self.assertEqual(chunks[-1], "short.")
+        self.assertTrue(all(len(chunk) <= 700 for chunk in chunks))
 
 
 if __name__ == "__main__":

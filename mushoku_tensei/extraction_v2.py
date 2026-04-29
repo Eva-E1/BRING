@@ -13,7 +13,8 @@ from __future__ import annotations
 import logging
 import re
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from time import perf_counter
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 from pydantic import BaseModel, Field, ValidationError
 
@@ -137,6 +138,7 @@ async def structured_extraction_v2(
     gateway: GatewayLLMClient,
     *,
     max_unit_chars: int = 700,
+    progress_callback: Optional[Callable[[dict[str, Any]], None]] = None,
 ) -> ExtractionResultV2:
     """
     Perform multi-stage extraction over smaller semantic units and merge results.
@@ -149,22 +151,124 @@ async def structured_extraction_v2(
     merged_edges: "OrderedDict[str, dict]" = OrderedDict()
     merged_markers: List[str] = []
 
-    for unit in extraction_units:
+    total_units = len(extraction_units)
+    for unit_index, unit in enumerate(extraction_units, start=1):
+        unit_started = perf_counter()
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "unit_start",
+                    "unit_index": unit_index,
+                    "unit_total": total_units,
+                    "unit_length": len(unit),
+                }
+            )
+
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_start",
+                    "unit_index": unit_index,
+                    "unit_total": total_units,
+                    "stage": "entities",
+                }
+            )
         entities = await _extract_entities(unit, gateway)
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_end",
+                    "unit_index": unit_index,
+                    "unit_total": total_units,
+                    "stage": "entities",
+                    "count": len(entities),
+                }
+            )
         for entity in entities:
             _merge_entity(merged_entities, entity)
 
         if entities:
+            if progress_callback is not None:
+                progress_callback(
+                    {
+                        "event": "stage_start",
+                        "unit_index": unit_index,
+                        "unit_total": total_units,
+                        "stage": "relationships",
+                    }
+                )
             relationships = await _extract_relationships(unit, entities, gateway)
+            if progress_callback is not None:
+                progress_callback(
+                    {
+                        "event": "stage_end",
+                        "unit_index": unit_index,
+                        "unit_total": total_units,
+                        "stage": "relationships",
+                        "count": len(relationships),
+                    }
+                )
             for edge in relationships:
                 _merge_edge(merged_edges, edge)
+        elif progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_skip",
+                    "unit_index": unit_index,
+                    "unit_total": total_units,
+                    "stage": "relationships",
+                    "reason": "no_entities",
+                }
+            )
 
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_start",
+                    "unit_index": unit_index,
+                    "unit_total": total_units,
+                    "stage": "time",
+                }
+            )
         time_markers = await _extract_time_markers(unit, gateway)
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_end",
+                    "unit_index": unit_index,
+                    "unit_total": total_units,
+                    "stage": "time",
+                    "count": len(time_markers),
+                }
+            )
         merged_markers.extend(time_markers)
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "unit_end",
+                    "unit_index": unit_index,
+                    "unit_total": total_units,
+                    "elapsed": perf_counter() - unit_started,
+                    "entity_total": len(merged_entities),
+                    "edge_total": len(merged_edges),
+                    "time_total": len(merged_markers),
+                }
+            )
 
     final_entities = list(merged_entities.values())
     final_edges = _filter_edges_by_known_entities(list(merged_edges.values()), final_entities)
     final_markers = _dedupe_strings(merged_markers)
+
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "event": "segment_complete",
+                "unit_total": total_units,
+                "entity_total": len(final_entities),
+                "edge_total": len(final_edges),
+                "time_total": len(final_markers),
+            }
+        )
 
     return ExtractionResultV2(
         entities=final_entities,
@@ -318,6 +422,14 @@ def _split_long_text(text: str, max_unit_chars: int) -> List[str]:
     current: List[str] = []
     current_len = 0
     for sentence in sentences:
+        if len(sentence) > max_unit_chars:
+            if current:
+                chunks.append(" ".join(current).strip())
+                current = []
+                current_len = 0
+            chunks.extend(_split_by_words(sentence, max_unit_chars))
+            continue
+
         projected = current_len + len(sentence) + (1 if current else 0)
         if current and projected > max_unit_chars:
             chunks.append(" ".join(current).strip())
@@ -337,6 +449,14 @@ def _split_by_words(text: str, max_unit_chars: int) -> List[str]:
     current: List[str] = []
     current_len = 0
     for word in words:
+        if len(word) > max_unit_chars:
+            if current:
+                chunks.append(" ".join(current).strip())
+                current = []
+                current_len = 0
+            chunks.extend(word[index : index + max_unit_chars] for index in range(0, len(word), max_unit_chars))
+            continue
+
         projected = current_len + len(word) + (1 if current else 0)
         if current and projected > max_unit_chars:
             chunks.append(" ".join(current).strip())
