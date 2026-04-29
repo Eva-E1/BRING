@@ -3,6 +3,7 @@ import hashlib
 import json
 import logging
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from time import perf_counter
 from typing import Any, Callable, Optional, Type
@@ -60,6 +61,22 @@ class ProviderRuntimeMetrics:
     ewma_latency: float | None = None
 
 
+@dataclass(slots=True)
+class CalibrationProbeResult:
+    level: int
+    successes: int
+    total: int
+    elapsed: float
+
+    @property
+    def per_request_latency(self) -> float:
+        return self.elapsed / max(1, self.total)
+
+    @property
+    def succeeded(self) -> bool:
+        return self.successes == self.total
+
+
 class LLMClient:
     """
     Single-entry LLM gateway.
@@ -88,6 +105,15 @@ class LLMClient:
         self._plain_client: Any = None
         self._instructor_lock = asyncio.Lock()
         self._plain_lock = asyncio.Lock()
+        self._provider_settings = self.config.provider_settings
+        self._client_kwargs = self._provider_settings.build_client_kwargs()
+        if self.config.request_timeout_seconds and "timeout" not in self._client_kwargs:
+            self._client_kwargs["timeout"] = self.config.request_timeout_seconds
+        self._request_kwargs = {
+            key: value for key, value in self._provider_settings.request_kwargs.items() if value is not None
+        }
+        self._runtime_provider = self.config.runtime_provider
+        self._bypass_instructor = self._compute_should_bypass_instructor()
         self._parallelism_limit = 1
         self._parallelism_min = 1
         self._parallelism_max = 8
@@ -98,6 +124,12 @@ class LLMClient:
         self._parallelism_rate_limits = 0
         self._parallelism_ewma_latency: float | None = None
         self._parallelism_condition = asyncio.Condition()
+        self._inflight_cache: dict[str, asyncio.Future[LLMResponse]] = {}
+        self._inflight_cache_lock = asyncio.Lock()
+        self.configure_parallelism(
+            initial=self.config.startup_parallelism,
+            maximum=max(self.config.startup_parallelism, self.config.startup_parallelism_max),
+        )
 
     @classmethod
     def from_settings(
@@ -131,9 +163,9 @@ class LLMClient:
             if self._plain_client is not None:
                 return self._plain_client
 
-            provider = self.config.runtime_provider
-            provider_settings = self.config.provider_settings
-            client_kwargs = provider_settings.build_client_kwargs()
+            provider = self._runtime_provider
+            provider_settings = self._provider_settings
+            client_kwargs = self._client_kwargs
 
             if provider in {"openai", "azure"}:
                 import openai
@@ -168,35 +200,55 @@ class LLMClient:
                 )
             return self._plain_client
 
+    def _build_chat_payload(self, prompt: str, **extra: Any) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "model": self.config.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens,
+        }
+        payload.update(self._request_kwargs)
+        payload.update(extra)
+        return {key: value for key, value in payload.items() if value is not None}
+
+    @staticmethod
+    def _classify_provider_error(exc: Exception, provider: str, *, structured: bool = False) -> Exception:
+        status_code = getattr(exc, "status_code", None)
+        if status_code == 429:
+            return RateLimitError(f"Rate limited by {provider}")
+        if status_code in {401, 403}:
+            return ConfigurationError(f"Config error with {provider}")
+        if status_code in {408, 409, 500, 502, 503, 504, 529}:
+            return ProviderNotAvailableError(f"{provider} unavailable")
+
+        err = str(exc).lower()
+        if any(token in err for token in ("rate limit", "too many requests", "quota")):
+            return RateLimitError(f"Rate limited by {provider}")
+        if any(token in err for token in ("not available", "service unavailable", "overloaded", "temporarily unavailable")):
+            return ProviderNotAvailableError(f"{provider} unavailable")
+        if any(token in err for token in ("invalid", "auth", "unauthorized", "forbidden", "api key")):
+            return ConfigurationError(f"Config error with {provider}")
+
+        prefix = "Instructor structured call failed" if structured else "Provider call failed"
+        return LLMGatewayError(f"{prefix}: {exc}")
+
     async def _text_call(self, prompt: str) -> str:
         @self._retry
         async def _attempt() -> str:
             try:
                 client = await self._get_plain_client()
-                resp = await client.chat.completions.create(
-                    model=self.config.model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=self.config.temperature,
-                    max_tokens=self.config.max_tokens,
-                )
+                resp = await client.chat.completions.create(**self._build_chat_payload(prompt))
                 content = resp.choices[0].message.content
                 if content is None:
                     raise EmptyResponseError("LLM returned empty content")
                 return content
             except Exception as exc:
-                err = str(exc).lower()
-                if "rate limit" in err:
-                    raise RateLimitError(f"Rate limited by {self.config.provider}") from exc
-                if "not available" in err or "service unavailable" in err:
-                    raise ProviderNotAvailableError(f"{self.config.provider} unavailable") from exc
-                if "invalid" in err or "auth" in err:
-                    raise ConfigurationError(f"Config error with {self.config.provider}") from exc
-                raise LLMGatewayError(f"Provider call failed: {exc}") from exc
+                raise self._classify_provider_error(exc, self.config.provider) from exc
 
         return await _attempt()
 
     def _supports_instructor(self) -> bool:
-        return self.config.runtime_provider in _INSTRUCTOR_SUPPORTED_PROVIDERS
+        return self._runtime_provider in _INSTRUCTOR_SUPPORTED_PROVIDERS
 
     @property
     def recommended_parallelism(self) -> int:
@@ -285,7 +337,7 @@ class LLMClient:
         self,
         *,
         max_parallelism: int = 6,
-        samples_per_level: int = 1,
+        samples_per_level: int = 2,
         probe_prompt: str = "Reply with exactly OK.",
         progress_callback: Optional[Callable[[dict[str, Any]], None]] = None,
     ) -> int:
@@ -298,7 +350,18 @@ class LLMClient:
         self.configure_parallelism(initial=max_parallelism, maximum=max_parallelism)
 
         try:
-            for level in range(1, max_parallelism + 1):
+            search_levels: list[int] = []
+            level = 1
+            while level <= max_parallelism:
+                search_levels.append(level)
+                if level == max_parallelism:
+                    break
+                level = min(max_parallelism, level * 2)
+
+            low = 1
+            high: int | None = None
+
+            for level in search_levels:
                 if progress_callback is not None:
                     progress_callback(
                         {
@@ -308,39 +371,83 @@ class LLMClient:
                             "samples": samples_per_level * level,
                         }
                     )
-                started = perf_counter()
-                tasks = [
-                    asyncio.create_task(
-                        self.generate(f"{probe_prompt} probe={level}-{sample}-{perf_counter():.6f}")
-                    )
-                    for sample in range(samples_per_level * level)
-                ]
-                results = await asyncio.gather(*tasks, return_exceptions=True)
-                elapsed = perf_counter() - started
-                successes = sum(1 for item in results if isinstance(item, LLMResponse))
+                probe = await self._probe_parallelism_level(
+                    level=level,
+                    rounds=samples_per_level,
+                    probe_prompt=probe_prompt,
+                    progress_callback=progress_callback,
+                )
                 if progress_callback is not None:
                     progress_callback(
                         {
                             "event": "calibration_result",
-                            "level": level,
+                            "level": probe.level,
                             "max_parallelism": max_parallelism,
-                            "samples": len(results),
-                            "successes": successes,
-                            "elapsed": elapsed,
+                            "samples": probe.total,
+                            "successes": probe.successes,
+                            "elapsed": probe.elapsed,
                         }
                     )
-                if successes != len(results):
+                if not probe.succeeded:
+                    high = probe.level - 1
                     break
 
-                per_request_latency = elapsed / max(1, len(results))
+                per_request_latency = probe.per_request_latency
                 if baseline_latency is None:
                     baseline_latency = per_request_latency
-                    best_parallelism = level
+                    best_parallelism = probe.level
+                    low = probe.level
                     continue
 
-                if per_request_latency > baseline_latency * 2.5:
+                if per_request_latency > baseline_latency * 2.25:
+                    high = probe.level - 1
                     break
-                best_parallelism = level
+                best_parallelism = probe.level
+                low = probe.level
+            else:
+                high = max_parallelism
+
+            if high is None:
+                high = max_parallelism
+
+            left = max(low + 1, 2)
+            right = high
+            while left <= right:
+                level = (left + right) // 2
+                if progress_callback is not None:
+                    progress_callback(
+                        {
+                            "event": "calibration_start",
+                            "level": level,
+                            "max_parallelism": max_parallelism,
+                            "samples": samples_per_level * level,
+                        }
+                    )
+                probe = await self._probe_parallelism_level(
+                    level=level,
+                    rounds=samples_per_level,
+                    probe_prompt=probe_prompt,
+                    progress_callback=progress_callback,
+                )
+                if progress_callback is not None:
+                    progress_callback(
+                        {
+                            "event": "calibration_result",
+                            "level": probe.level,
+                            "max_parallelism": max_parallelism,
+                            "samples": probe.total,
+                            "successes": probe.successes,
+                            "elapsed": probe.elapsed,
+                        }
+                    )
+
+                if probe.succeeded and (
+                    baseline_latency is None or probe.per_request_latency <= baseline_latency * 2.25
+                ):
+                    best_parallelism = probe.level
+                    left = probe.level + 1
+                else:
+                    right = probe.level - 1
 
             self.configure_parallelism(initial=best_parallelism, maximum=max_parallelism)
             logger.info(
@@ -369,10 +476,10 @@ class LLMClient:
         return any(token in model_name for token in _TOOL_FRAGILE_MODEL_TOKENS)
 
     def _is_custom_openai_compatible_endpoint(self) -> bool:
-        if self.config.runtime_provider != "openai":
+        if self._runtime_provider != "openai":
             return False
 
-        base_url = self.config.provider_settings.base_url
+        base_url = self._provider_settings.base_url
         if not base_url:
             return False
 
@@ -388,7 +495,12 @@ class LLMClient:
             return True
         return hostname not in _OFFICIAL_OPENAI_HOSTS
 
-    def _should_bypass_instructor(self) -> bool:
+    def _compute_should_bypass_instructor(self) -> bool:
+        mode = (self.config.structured_output_mode or "auto").strip().lower()
+        if mode == "schema":
+            return True
+        if mode == "instructor":
+            return False
         return self._is_custom_openai_compatible_endpoint() or self._model_likely_needs_schema_prompt()
 
     @staticmethod
@@ -410,10 +522,10 @@ class LLMClient:
             if self._instructor_client is not None:
                 return self._instructor_client
 
-            provider = self.config.runtime_provider
-            provider_settings = self.config.provider_settings
-            client_kwargs = provider_settings.build_client_kwargs()
-            request_kwargs = dict(self.config.provider_settings.request_kwargs)
+            provider = self._runtime_provider
+            provider_settings = self._provider_settings
+            client_kwargs = self._client_kwargs
+            request_kwargs = self._request_kwargs
             if provider in {"openai", "azure"}:
                 import instructor
                 import openai
@@ -460,6 +572,7 @@ class LLMClient:
             return self._instructor_client
 
     @staticmethod
+    @lru_cache(maxsize=128)
     def _schema_hash(response_model: Type[Any]) -> str:
         if hasattr(response_model, "model_json_schema"):
             schema = response_model.model_json_schema()
@@ -472,6 +585,7 @@ class LLMClient:
         ).hexdigest()
 
     @staticmethod
+    @lru_cache(maxsize=128)
     def _schema_description(response_model: Type[Any]) -> str:
         if hasattr(response_model, "model_json_schema"):
             schema = response_model.model_json_schema()
@@ -573,27 +687,18 @@ class LLMClient:
 
     async def _structured_call(self, prompt: str, response_model: Type[Any]) -> str:
         client = await self._get_instructor_client()
-        request_kwargs = dict(self.config.provider_settings.request_kwargs)
-        messages = [{"role": "user", "content": prompt}]
 
         try:
             result = await client.chat.completions.create(
-                model=self.config.model,
-                messages=messages,
+                **self._build_chat_payload(prompt),
                 response_model=response_model,
-                max_tokens=self.config.max_tokens,
-                temperature=self.config.temperature,
-                **request_kwargs,
             )
         except Exception as exc:
-            err = str(exc).lower()
-            if "rate limit" in err:
-                raise RateLimitError(f"Rate limited by {self.config.provider}") from exc
-            if "not available" in err or "service unavailable" in err:
-                raise ProviderNotAvailableError(f"{self.config.provider} unavailable") from exc
-            if "invalid" in err or "auth" in err:
-                raise ConfigurationError(f"Config error with {self.config.provider}") from exc
-            raise LLMGatewayError(f"Instructor structured call failed: {exc}") from exc
+            raise self._classify_provider_error(
+                exc,
+                self.config.provider,
+                structured=True,
+            ) from exc
 
         if hasattr(result, "model_dump_json"):
             return result.model_dump_json()
@@ -601,42 +706,129 @@ class LLMClient:
             return result.json()
         return str(result)
 
+    async def _load_cached_response(self, cache_key: str | None) -> LLMResponse | None:
+        if cache_key is None:
+            return None
+        cached = await self._cache.get(cache_key)
+        if cached is None:
+            return None
+        return LLMResponse(
+            text=str(cached),
+            model=self.config.model,
+            provider="cache",
+        )
+
+    async def _acquire_inflight_cache(self, cache_key: str | None) -> tuple[asyncio.Future[LLMResponse] | None, bool]:
+        if cache_key is None:
+            return None, True
+
+        async with self._inflight_cache_lock:
+            existing = self._inflight_cache.get(cache_key)
+            if existing is not None:
+                return existing, False
+
+            future: asyncio.Future[LLMResponse] = asyncio.get_running_loop().create_future()
+            self._inflight_cache[cache_key] = future
+            return future, True
+
+    async def _resolve_inflight_cache(
+        self,
+        cache_key: str | None,
+        future: asyncio.Future[LLMResponse] | None,
+        *,
+        response: LLMResponse | None = None,
+        error: Exception | None = None,
+    ) -> None:
+        if cache_key is None or future is None:
+            return
+
+        async with self._inflight_cache_lock:
+            self._inflight_cache.pop(cache_key, None)
+
+        if future.done():
+            return
+        if error is not None:
+            future.set_exception(error)
+            return
+        if response is not None:
+            future.set_result(response)
+
+    async def _probe_parallelism_level(
+        self,
+        *,
+        level: int,
+        rounds: int,
+        probe_prompt: str,
+        progress_callback: Optional[Callable[[dict[str, Any]], None]] = None,
+    ) -> CalibrationProbeResult:
+        started = perf_counter()
+        successes = 0
+        total = 0
+
+        for round_index in range(rounds):
+            tasks = [
+                asyncio.create_task(
+                    self._text_call(f"{probe_prompt} probe={level}-{round_index}-{slot}-{perf_counter():.6f}")
+                )
+                for slot in range(level)
+            ]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            batch_successes = sum(1 for item in results if isinstance(item, str) and item.strip())
+            successes += batch_successes
+            total += len(results)
+
+            if progress_callback is not None:
+                progress_callback(
+                    {
+                        "event": "calibration_round",
+                        "level": level,
+                        "round": round_index + 1,
+                        "rounds": rounds,
+                        "successes": batch_successes,
+                        "samples": len(results),
+                    }
+                )
+
+            if batch_successes != len(results):
+                break
+
+        return CalibrationProbeResult(
+            level=level,
+            successes=successes,
+            total=total,
+            elapsed=max(0.0, perf_counter() - started),
+        )
+
     async def generate(
         self,
         prompt: str,
         response_model: Optional[Type[Any]] = None,
     ) -> LLMResponse:
+        schema_hash = self._schema_hash(response_model) if response_model is not None else ""
+        cache_key = f"{self.config.model_id}:{prompt}:{schema_hash}" if self._enable_cache else None
+        cached = await self._load_cached_response(cache_key)
+        if cached is not None:
+            return cached
+
+        inflight_future, should_execute = await self._acquire_inflight_cache(cache_key)
+        if not should_execute and inflight_future is not None:
+            return await asyncio.shield(inflight_future)
+
         await self._acquire_parallelism_slot()
         started = perf_counter()
         caught_error: Exception | None = None
-        schema_hash = self._schema_hash(response_model) if response_model is not None else ""
         try:
-            cache_key = (
-                f"{self.config.model_id}:{prompt}:{schema_hash}"
-                if self._enable_cache
-                else None
-            )
-
-            if cache_key is not None:
-                cached = await self._cache.get(cache_key)
-                if cached is not None:
-                    return LLMResponse(
-                        text=str(cached),
-                        model=self.config.model,
-                        provider="cache",
-                    )
-
             use_instructor = (
                 response_model is not None
                 and self._supports_instructor()
                 and self._is_instructor_response_model(response_model)
-                and not self._should_bypass_instructor()
+                and not self._bypass_instructor
             )
             final_prompt = prompt
             effective_response_model = response_model
 
             if response_model is not None and not use_instructor:
-                if self._should_bypass_instructor():
+                if self._bypass_instructor:
                     logger.debug(
                         "Bypassing Instructor for provider=%s model=%s response_model=%s to favor schema-guided prompting.",
                         self.config.provider,
@@ -687,15 +879,18 @@ class LLMClient:
             if cache_key is not None:
                 await self._cache.set(cache_key, raw_text)
 
-            return LLMResponse(
+            response = LLMResponse(
                 text=raw_text,
                 model=self.config.model,
                 provider=self.config.provider,
                 tokens_used=tokens_used,
                 cost=cost,
             )
+            await self._resolve_inflight_cache(cache_key, inflight_future, response=response)
+            return response
         except Exception as exc:
             caught_error = exc if isinstance(exc, Exception) else Exception(str(exc))
+            await self._resolve_inflight_cache(cache_key, inflight_future, error=caught_error)
             raise
         finally:
             await self._release_parallelism_slot(

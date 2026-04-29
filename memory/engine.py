@@ -84,6 +84,8 @@ class MemoryEngine:
         group_id: str = "default",
     ) -> None:
         prepared = self._maintenance.prepare_episode_batch(episodes, group_id)
+        # Graph backends often mutate shared state during episode insertion, so
+        # keep writes ordered and deterministic even when callers batch upstream.
         for episode in prepared:
             await self._add_single_episode(
                 name=episode.name,

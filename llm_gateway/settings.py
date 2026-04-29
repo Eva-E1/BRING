@@ -95,6 +95,10 @@ class GatewaySettings(BaseModel):
     model: str = "gpt-3.5-turbo"
     temperature: float = 0.7
     max_tokens: int = 1024
+    startup_parallelism: int = 1
+    startup_parallelism_max: int = 8
+    request_timeout_seconds: float = 90.0
+    structured_output_mode: str = "auto"
 
     @classmethod
     def from_file(
@@ -181,6 +185,26 @@ class GatewaySettings(BaseModel):
                 "LLM_MAX_TOKENS",
                 default=cls.model_fields["max_tokens"].default,
             ),
+            startup_parallelism=read_int(
+                merged,
+                "LLM_PARALLELISM",
+                default=cls.model_fields["startup_parallelism"].default,
+            ),
+            startup_parallelism_max=read_int(
+                merged,
+                "LLM_MAX_PARALLELISM",
+                default=cls.model_fields["startup_parallelism_max"].default,
+            ),
+            request_timeout_seconds=read_float(
+                merged,
+                "LLM_TIMEOUT_SECONDS",
+                default=cls.model_fields["request_timeout_seconds"].default,
+            ),
+            structured_output_mode=read_str(
+                merged,
+                "LLM_STRUCTURED_OUTPUT_MODE",
+                default=cls.model_fields["structured_output_mode"].default,
+            ) or cls.model_fields["structured_output_mode"].default,
         )
 
     @property
@@ -244,6 +268,10 @@ class GatewaySettings(BaseModel):
                 "base_url": self.base_url,
                 "api_version": self.api_version,
                 "organization": self.organization,
+                "startup_parallelism": self.startup_parallelism,
+                "startup_parallelism_max": self.startup_parallelism_max,
+                "request_timeout_seconds": self.request_timeout_seconds,
+                "structured_output_mode": self.structured_output_mode,
             }
         )
         return data

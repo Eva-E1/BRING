@@ -1,11 +1,19 @@
+from functools import lru_cache
+
 import tiktoken
 
-def num_tokens_from_string(string: str, model: str = "gpt-3.5-turbo") -> int:
+
+@lru_cache(maxsize=32)
+def _encoding_for_model(model: str):
+    normalized_model = model or "gpt-3.5-turbo"
     try:
-        encoding = tiktoken.encoding_for_model(model)
+        return tiktoken.encoding_for_model(normalized_model)
     except KeyError:
-        encoding = tiktoken.get_encoding("cl100k_base")
-    return len(encoding.encode(string))
+        return tiktoken.get_encoding("cl100k_base")
+
+
+def num_tokens_from_string(string: str, model: str = "gpt-3.5-turbo") -> int:
+    return len(_encoding_for_model(model).encode(string))
 
 def cost_estimate(prompt: str, response: str, model: str) -> float:
     # Pricing per 1k tokens (input, output)

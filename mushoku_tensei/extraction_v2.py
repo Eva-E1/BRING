@@ -9,12 +9,13 @@ Accuracy improvements:
 """
 
 from __future__ import annotations
-
+import asyncio
+import inspect
 import logging
 import re
 from collections import OrderedDict
 from time import perf_counter
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Optional
 
 from pydantic import BaseModel, Field, ValidationError
 
@@ -41,10 +42,21 @@ Entity types:
 - HistoricalEvent: name, year_start, year_end, description
 - Arc: name, volume, description
 - Concept: name, description
+- Memory: name, content, past_life_reference, emotion
+- Skill: name, level, system, description
+- MagicSystem: name, requires_incantation, complexity, description
+- Job: name, employer, duration, description
+- Emotion: name, type, intensity, cause
+- CalendarEra: name, shorthand, year_zero_offset, description
+- CharacterAge: name, character_name, age_years, description
+- TimelineEvent: name, era, year, description
+- NarrativeArc: name, phase, volume, description
 
 Rules:
 - Use the exact surface form from the text when possible.
 - If a mention is generic and cannot be resolved safely, keep it generic rather than hallucinating.
+- For first-person narration, preserve "I" only when identity is genuinely ambiguous; otherwise prefer the grounded in-scene identity.
+- Extract emotional or skill entities only when the text clearly describes them, not from vague tone.
 - Put all extracted properties inside `attributes`.
 - Omit empty attributes.
 
@@ -74,11 +86,22 @@ Relationship types:
 - PartOfArc(source, target)         : Event|HistoricalEvent|Character -> Arc (attributes: role)
 - Causes(source, target)            : Event|HistoricalEvent|Ability -> Event|HistoricalEvent
 - InvolvesConcept(source, target)   : Character|Event|Arc|WorldRule|Ability -> Concept (attributes: relevance)
+- Teaches(source, target)           : Character -> Character (attributes: subject)
+- Trains(source, target)            : Character -> Character (attributes: style)
+- Protects(source, target)          : Character -> Character
+- Bullys(source, target)            : Character -> Character
+- Serves(source, target)            : Character -> Character (attributes: role)
+- Betrays(source, target)           : Character -> Character
+- Regrets(source, target)           : Character -> Event|HistoricalEvent|Concept|Memory (attributes: intensity)
+- Fears(source, target)             : Character -> Character|Event|Concept|Ability|WorldRule (attributes: intensity)
+- FatherOf(source, target)          : Character -> Character
+- Trusts(source, target)            : Character -> Character (attributes: trust_level, affection)
 
 Rules:
 - Only emit relationships where both source and target are present in the provided entity list.
 - Prefer no edge over a weak or speculative edge.
 - If trust_level is unknown, omit it.
+- Numeric trust or affection must be grounded in explicit wording, not guessed from genre assumptions.
 - Keep attributes concise and text-grounded.
 
 Return ONLY a JSON object:
@@ -94,6 +117,15 @@ You are extracting temporal evidence from a Mushoku Tensei excerpt.
 
 Extract only phrases that directly indicate time, age, sequence, duration, or
 calendar reference. Preserve the wording closely.
+
+Examples of useful markers:
+- "Rudeus was five years old"
+- "the next morning"
+- "later that day"
+- "a few moments later"
+- "two years later"
+- "K423"
+- "Armored Dragon Calendar year 423"
 
 Return ONLY a JSON object:
 {
@@ -133,12 +165,25 @@ class ExtractionResultV2(BaseModel):
     time_markers: List[str] = Field(default_factory=list)
 
 
+TIME_CUE_PATTERN = re.compile(
+    r"\b("
+    r"year|years|month|months|week|weeks|day|days|night|morning|evening|noon|midnight|"
+    r"second|seconds|minute|minutes|moment|moments|awhile|while|"
+    r"later|afterward|afterwards|before|during|while|when|suddenly|soon|eventually|"
+    r"yesterday|today|tomorrow|age|aged|old|birthday|spring|summer|autumn|fall|winter|"
+    r"first|second|third|next day|that night|the following|calendar|k\d+"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
 async def structured_extraction_v2(
     episode_body: str,
     gateway: GatewayLLMClient,
     *,
     max_unit_chars: int = 700,
-    progress_callback: Optional[Callable[[dict[str, Any]], None]] = None,
+    segment_context: Optional[Dict[str, Any]] = None,
+    progress_callback: Optional[Callable[[dict[str, Any]], Awaitable[None] | None]] = None,
 ) -> ExtractionResultV2:
     """
     Perform multi-stage extraction over smaller semantic units and merge results.
@@ -154,8 +199,15 @@ async def structured_extraction_v2(
     total_units = len(extraction_units)
     for unit_index, unit in enumerate(extraction_units, start=1):
         unit_started = perf_counter()
+        prompt_context = _build_prompt_context(
+            unit=unit,
+            unit_index=unit_index,
+            unit_total=total_units,
+            segment_context=segment_context,
+        )
         if progress_callback is not None:
-            progress_callback(
+            await _emit_progress(
+                progress_callback,
                 {
                     "event": "unit_start",
                     "unit_index": unit_index,
@@ -164,86 +216,130 @@ async def structured_extraction_v2(
                 }
             )
 
+        # ----- Entities stage -----
         if progress_callback is not None:
-            progress_callback(
+            await _emit_progress(
+                progress_callback,
                 {
                     "event": "stage_start",
+                    "stage": "entities",
                     "unit_index": unit_index,
                     "unit_total": total_units,
-                    "stage": "entities",
                 }
             )
-        entities = await _extract_entities(unit, gateway)
-        if progress_callback is not None:
-            progress_callback(
+        entity_task = asyncio.create_task(_extract_entities(unit, gateway, prompt_context=prompt_context))
+        time_task: asyncio.Task[List[str]] | None = None
+        if _unit_likely_contains_time_cues(unit):
+            if progress_callback is not None:
+                await _emit_progress(
+                    progress_callback,
+                    {
+                        "event": "stage_start",
+                        "stage": "time",
+                        "unit_index": unit_index,
+                        "unit_total": total_units,
+                    }
+                )
+            time_task = asyncio.create_task(_extract_time_markers(unit, gateway, prompt_context=prompt_context))
+        elif progress_callback is not None:
+            await _emit_progress(
+                progress_callback,
                 {
-                    "event": "stage_end",
+                    "event": "stage_skip",
+                    "stage": "time",
                     "unit_index": unit_index,
                     "unit_total": total_units,
+                    "reason": "no_time_cues",
+                }
+            )
+
+        try:
+            if time_task is not None:
+                entities, time_markers = await asyncio.gather(entity_task, time_task)
+            else:
+                entities = await entity_task
+                time_markers = []
+        except Exception:
+            if time_task is not None and not time_task.done():
+                time_task.cancel()
+                await asyncio.gather(time_task, return_exceptions=True)
+            raise
+
+        if progress_callback is not None:
+            await _emit_progress(
+                progress_callback,
+                {
+                    "event": "stage_end",
                     "stage": "entities",
+                    "unit_index": unit_index,
+                    "unit_total": total_units,
                     "count": len(entities),
                 }
             )
         for entity in entities:
             _merge_entity(merged_entities, entity)
 
-        if entities:
+        if time_task is not None:
             if progress_callback is not None:
-                progress_callback(
-                    {
-                        "event": "stage_start",
-                        "unit_index": unit_index,
-                        "unit_total": total_units,
-                        "stage": "relationships",
-                    }
-                )
-            relationships = await _extract_relationships(unit, entities, gateway)
-            if progress_callback is not None:
-                progress_callback(
+                await _emit_progress(
+                    progress_callback,
                     {
                         "event": "stage_end",
+                        "stage": "time",
                         "unit_index": unit_index,
                         "unit_total": total_units,
+                        "count": len(time_markers),
+                    }
+                )
+            merged_markers.extend(time_markers)
+
+        # ----- Relationships stage -----
+        relationship_entities = _select_relationship_entities(list(merged_entities.values()), entities)
+        if len(relationship_entities) >= 2:
+            if progress_callback is not None:
+                await _emit_progress(
+                    progress_callback,
+                    {
+                        "event": "stage_start",
                         "stage": "relationships",
+                        "unit_index": unit_index,
+                        "unit_total": total_units,
+                    }
+                )
+            relationships = await _extract_relationships(
+                unit,
+                relationship_entities,
+                gateway,
+                prompt_context=prompt_context,
+            )
+            if progress_callback is not None:
+                await _emit_progress(
+                    progress_callback,
+                    {
+                        "event": "stage_end",
+                        "stage": "relationships",
+                        "unit_index": unit_index,
+                        "unit_total": total_units,
                         "count": len(relationships),
                     }
                 )
             for edge in relationships:
                 _merge_edge(merged_edges, edge)
         elif progress_callback is not None:
-            progress_callback(
+            await _emit_progress(
+                progress_callback,
                 {
                     "event": "stage_skip",
+                    "stage": "relationships",
                     "unit_index": unit_index,
                     "unit_total": total_units,
-                    "stage": "relationships",
-                    "reason": "no_entities",
+                    "reason": "insufficient_entities",
                 }
             )
 
         if progress_callback is not None:
-            progress_callback(
-                {
-                    "event": "stage_start",
-                    "unit_index": unit_index,
-                    "unit_total": total_units,
-                    "stage": "time",
-                }
-            )
-        time_markers = await _extract_time_markers(unit, gateway)
-        if progress_callback is not None:
-            progress_callback(
-                {
-                    "event": "stage_end",
-                    "unit_index": unit_index,
-                    "unit_total": total_units,
-                    "stage": "time",
-                    "count": len(time_markers),
-                }
-            )
-        merged_markers.extend(time_markers)
-        if progress_callback is not None:
-            progress_callback(
+            await _emit_progress(
+                progress_callback,
                 {
                     "event": "unit_end",
                     "unit_index": unit_index,
@@ -260,7 +356,8 @@ async def structured_extraction_v2(
     final_markers = _dedupe_strings(merged_markers)
 
     if progress_callback is not None:
-        progress_callback(
+        await _emit_progress(
+            progress_callback,
             {
                 "event": "segment_complete",
                 "unit_total": total_units,
@@ -277,9 +374,31 @@ async def structured_extraction_v2(
     )
 
 
-async def _extract_entities(unit_text: str, gateway: GatewayLLMClient) -> List[dict]:
-    prompt = f"{ENTITY_EXTRACTION_PROMPT}\n\nExcerpt:\n{unit_text}"
-    response = await gateway.generate(prompt, response_model=EntityExtractionResult)
+async def _emit_progress(
+    callback: Callable[[dict[str, Any]], Awaitable[None] | None],
+    payload: dict[str, Any],
+) -> None:
+    result = callback(payload)
+    if inspect.isawaitable(result):
+        await result
+
+
+async def _extract_entities(
+    unit_text: str,
+    gateway: GatewayLLMClient,
+    *,
+    prompt_context: str = "",
+) -> List[dict]:
+    prompt = (
+        f"{ENTITY_EXTRACTION_PROMPT}\n\n"
+        f"{prompt_context}"
+        f"Excerpt:\n{unit_text}"
+    )
+    try:
+        response = await gateway.generate(prompt, response_model=EntityExtractionResult)
+    except Exception as exc:
+        logger.warning("Entity extraction failed; skipping unit (%s)", exc)
+        return []
     try:
         entities = EntityExtractionResult.model_validate_json(response.text).entities
     except ValidationError as exc:
@@ -306,14 +425,21 @@ async def _extract_relationships(
     unit_text: str,
     entities: List[dict],
     gateway: GatewayLLMClient,
+    *,
+    prompt_context: str = "",
 ) -> List[dict]:
     entity_list_str = ", ".join(entity["name"] for entity in entities[:50])
     prompt = (
         f"{RELATIONSHIP_EXTRACTION_PROMPT}\n\n"
+        f"{prompt_context}"
         f"Entities in this excerpt:\n{entity_list_str}\n\n"
         f"Excerpt:\n{unit_text}"
     )
-    response = await gateway.generate(prompt, response_model=RelationshipExtractionResult)
+    try:
+        response = await gateway.generate(prompt, response_model=RelationshipExtractionResult)
+    except Exception as exc:
+        logger.warning("Relationship extraction failed; skipping unit (%s)", exc)
+        return []
     try:
         relationships = RelationshipExtractionResult.model_validate_json(response.text).relationships
     except ValidationError as exc:
@@ -341,9 +467,18 @@ async def _extract_relationships(
     return cleaned
 
 
-async def _extract_time_markers(unit_text: str, gateway: GatewayLLMClient) -> List[str]:
-    prompt = f"{TIME_MARKER_PROMPT}\n\nExcerpt:\n{unit_text}"
-    response = await gateway.generate(prompt, response_model=TimeMarkerExtractionResult)
+async def _extract_time_markers(
+    unit_text: str,
+    gateway: GatewayLLMClient,
+    *,
+    prompt_context: str = "",
+) -> List[str]:
+    prompt = f"{TIME_MARKER_PROMPT}\n\n{prompt_context}Excerpt:\n{unit_text}"
+    try:
+        response = await gateway.generate(prompt, response_model=TimeMarkerExtractionResult)
+    except Exception as exc:
+        logger.warning("Time-marker extraction failed; skipping unit (%s)", exc)
+        return []
     try:
         time_markers = TimeMarkerExtractionResult.model_validate_json(response.text).time_markers
     except ValidationError:
@@ -381,6 +516,44 @@ def _build_extraction_units(text: str, *, max_unit_chars: int) -> List[str]:
         units.append(_format_unit_text(heading, current_parts))
 
     return [unit for unit in units if unit.strip()]
+
+
+def _build_prompt_context(
+    *,
+    unit: str,
+    unit_index: int,
+    unit_total: int,
+    segment_context: Optional[Dict[str, Any]],
+) -> str:
+    context_lines: List[str] = []
+    if segment_context:
+        heading = str(segment_context.get("heading") or "").strip()
+        if heading:
+            context_lines.append(f"Segment heading:\n{heading}")
+
+        volume = segment_context.get("volume")
+        chapter = segment_context.get("chapter")
+        if volume is not None or chapter is not None:
+            context_lines.append(
+                "Narrative position: "
+                f"volume={volume if volume is not None else '?'} "
+                f"chapter={chapter if chapter is not None else '?'} "
+                f"scene={segment_context.get('scene_index', '?')}"
+            )
+
+        prev_excerpt = str(segment_context.get("previous_excerpt") or "").strip()
+        next_excerpt = str(segment_context.get("next_excerpt") or "").strip()
+        if prev_excerpt:
+            context_lines.append(f"Previous scene hint:\n{prev_excerpt}")
+        if next_excerpt:
+            context_lines.append(f"Next scene hint:\n{next_excerpt}")
+
+    if unit_total > 1:
+        context_lines.append(f"Unit position inside segment: {unit_index}/{unit_total}")
+
+    if not context_lines:
+        return ""
+    return "\n\nContext:\n" + "\n\n".join(context_lines) + "\n\n"
 
 
 def _split_heading(text: str) -> tuple[Optional[str], str]:
@@ -468,6 +641,27 @@ def _split_by_words(text: str, max_unit_chars: int) -> List[str]:
     if current:
         chunks.append(" ".join(current).strip())
     return chunks
+
+
+def _select_relationship_entities(merged_entities: List[dict], local_entities: List[dict]) -> List[dict]:
+    prioritized: "OrderedDict[tuple[str, str], dict]" = OrderedDict()
+    for entity in local_entities:
+        key = (_normalize_name(entity["name"]), entity["entity_type"])
+        prioritized[key] = entity
+
+    # Include earlier canonical entities from the same segment to improve consistency.
+    for entity in merged_entities:
+        key = (_normalize_name(entity["name"]), entity["entity_type"])
+        if key in prioritized:
+            continue
+        prioritized[key] = entity
+        if len(prioritized) >= 50:
+            break
+    return list(prioritized.values())
+
+
+def _unit_likely_contains_time_cues(unit_text: str) -> bool:
+    return bool(TIME_CUE_PATTERN.search(unit_text))
 
 
 def _merge_entity(merged_entities: "OrderedDict[tuple[str, str], dict]", entity: dict) -> None:

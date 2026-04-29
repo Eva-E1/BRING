@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from bring_cli_support import (
+    assess_startup_profile,
     build_env_contents,
     default_database_id,
     infer_provider,
@@ -24,6 +25,17 @@ class CliSupportTests(unittest.TestCase):
         self.assertEqual(suggest_embedding_dimensions("text-embedding-3-large"), 3072)
         self.assertEqual(suggest_embedding_dimensions("text-embedding-3-small"), 1536)
         self.assertEqual(suggest_embedding_dimensions("unknown-model"), 1536)
+
+    def test_assess_startup_profile_prefers_schema_mode_for_custom_openai_compatible_models(self):
+        profile = assess_startup_profile(
+            base_url="https://gateway.internal.example/v1",
+            model="fibonacci-1-pro",
+            provider="openai",
+            provider_type="openai",
+        )
+        self.assertEqual(profile.structured_output_mode, "schema")
+        self.assertLessEqual(profile.startup_parallelism, 3)
+        self.assertGreaterEqual(profile.request_timeout_seconds, 120.0)
 
     def test_default_database_id(self):
         self.assertEqual(default_database_id("Mushoku Tensei V2"), "mushoku-tensei-v2")

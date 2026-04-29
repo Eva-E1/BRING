@@ -21,6 +21,7 @@ HEADING_PATTERN = re.compile(
     r"(?im)^(?:\s*)(Volume\s+\d+|Chapter\s+\d+|Prologue|Epilogue|Interlude|Extra(?:\s+Chapter)?)\b.*$"
 )
 SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?\"'])\s+(?=[A-Z0-9\"'])")
+JAPANESE_TEXT_PATTERN = re.compile(r"[\u3040-\u30FF\u4E00-\u9FFF]")
 
 
 async def segment_text(
@@ -42,6 +43,8 @@ async def segment_text(
     current_chapter: Optional[int] = None
 
     for section_index, section in enumerate(sections):
+        if _is_japanese_heavy_text(section["body"]):
+            continue
         heading_meta = _guess_meta(section["heading"])
         current_volume = heading_meta.get("volume", current_volume)
         current_chapter = heading_meta.get("chapter", current_chapter)
@@ -67,6 +70,7 @@ async def segment_text(
                 }
             )
 
+    _attach_neighbor_context(segments)
     logger.info("Segmented text into %d semantic chunks.", len(segments))
     return segments
 
@@ -155,6 +159,13 @@ def _paragraph_blocks(text: str) -> List[str]:
 def _split_long_paragraph(paragraph: str, max_chunk_chars: int) -> List[str]:
     sentences = [s.strip() for s in SENTENCE_SPLIT_PATTERN.split(paragraph) if s.strip()]
     if len(sentences) <= 1:
+        if "\n" in paragraph:
+            blocks = [block.strip() for block in re.split(r"\n\s*\n+", paragraph) if block.strip()]
+            if len(blocks) > 1:
+                units: List[str] = []
+                for block in blocks:
+                    units.extend(_hard_wrap_text(block, max_chunk_chars))
+                return units
         return _hard_wrap_text(paragraph, max_chunk_chars)
 
     units: List[str] = []
@@ -282,3 +293,29 @@ def _rollup_headings(pending_headings: List[str], heading: str) -> List[str]:
 
 def iter_segment_texts(segments: Iterable[dict]) -> List[str]:
     return [str(segment.get("text", "")).strip() for segment in segments if segment.get("text")]
+
+
+def _attach_neighbor_context(segments: List[dict], *, excerpt_chars: int = 500) -> None:
+    for index, segment in enumerate(segments):
+        previous_segment = segments[index - 1] if index > 0 else None
+        next_segment = segments[index + 1] if index + 1 < len(segments) else None
+        segment["previous_excerpt"] = _segment_excerpt(previous_segment, excerpt_chars)
+        segment["next_excerpt"] = _segment_excerpt(next_segment, excerpt_chars)
+
+
+def _segment_excerpt(segment: Optional[dict], max_chars: int) -> str:
+    if not segment:
+        return ""
+    text = str(segment.get("clean_text") or segment.get("text") or "").strip()
+    if len(text) <= max_chars:
+        return text
+    truncated = text[:max_chars].rsplit(" ", 1)[0].strip()
+    return f"{truncated}..." if truncated else text[:max_chars]
+
+
+def _is_japanese_heavy_text(text: str, *, threshold: float = 0.30) -> bool:
+    stripped = re.sub(r"\s+", "", text or "")
+    if not stripped:
+        return False
+    jp_chars = JAPANESE_TEXT_PATTERN.findall(stripped)
+    return (len(jp_chars) / len(stripped)) > threshold

@@ -13,6 +13,7 @@ from memory.engine import MemoryEngine
 from mushoku_tensei.graph_builder import build_layered_graph
 from mushoku_tensei.ingest_v2 import validate_gateway_configuration
 from mushoku_tensei.ingest_v2 import (
+    iter_ingestion_batches,
     load_segment_checkpoint,
     mark_segment_extracted,
     resume_or_initialize_state,
@@ -43,6 +44,7 @@ class MemorySyncTests(unittest.TestCase):
                 {
                     "index": 0,
                     "text": "Volume 1\n\nChapter 1\n\nRudeus studies magic.",
+                    "clean_text": "Rudeus studies magic.",
                     "volume": 1,
                     "chapter": 1,
                     "heading": "Volume 1\nChapter 1",
@@ -81,6 +83,7 @@ class MemorySyncTests(unittest.TestCase):
         self.assertEqual(episode["metadata"]["heading"], "Volume 1\nChapter 1")
         self.assertEqual(episode["metadata"]["scene_index"], 0)
         self.assertEqual(episode["metadata"]["segment_kind"], "chapter_scene")
+        self.assertIn("studies magic", episode["metadata"]["clean_text"])
         self.assertEqual(episode["metadata"]["entities"][0]["attributes"]["layer"], "fact")
         self.assertEqual(episode["metadata"]["entities"][1]["attributes"]["layer"], "rule")
         self.assertEqual(episode["metadata"]["edges"][0]["attributes"]["layer"], "rule")
@@ -121,6 +124,29 @@ class MemorySyncTests(unittest.TestCase):
         self.assertIn("volume=1", calls[0].kwargs["source_description"])
         self.assertIn("chapter=1", calls[0].kwargs["source_description"])
 
+    def test_iter_ingestion_batches_groups_pending_segments(self):
+        graph_payload = [
+            {"name": "segment_0001"},
+            {"name": "segment_0002"},
+            {"name": "segment_0003"},
+        ]
+        extracted_data = [
+            {"index": 0},
+            {"index": 1},
+            {"index": 2},
+        ]
+
+        batches = iter_ingestion_batches(
+            graph_payload,
+            extracted_data,
+            completed_ingestion={1},
+            batch_size=2,
+        )
+
+        self.assertEqual(len(batches), 1)
+        self.assertEqual([episode["name"] for episode in batches[0][0]], ["segment_0001", "segment_0003"])
+        self.assertEqual(batches[0][1], [0, 2])
+
     def test_ingestion_checkpoint_state_can_resume_segment_results(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             settings = MemorySettings(database_root=Path(tmp_dir), database_id="mushoku-resume")
@@ -147,6 +173,40 @@ class MemorySyncTests(unittest.TestCase):
 
             resumed_state = resume_or_initialize_state(settings, full_text, segments)
             self.assertEqual(resumed_state["completed_extraction_indices"], [0])
+
+    def test_load_segment_checkpoint_rejects_missing_or_stale_fingerprint_when_expected(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            settings = MemorySettings(database_root=Path(tmp_dir), database_id="mushoku-fingerprint")
+
+            save_segment_checkpoint(
+                settings,
+                0,
+                {
+                    "index": 0,
+                    "text": "old text",
+                    "entities": [],
+                    "edges": [],
+                    "time_markers": [],
+                    "story_time": datetime(5, 1, 1),
+                },
+            )
+            self.assertIsNone(load_segment_checkpoint(settings, 0, expected_fingerprint="expected"))
+
+            save_segment_checkpoint(
+                settings,
+                0,
+                {
+                    "index": 0,
+                    "text": "new text",
+                    "entities": [],
+                    "edges": [],
+                    "time_markers": [],
+                    "story_time": datetime(5, 1, 1),
+                    "segment_fingerprint": "expected",
+                },
+            )
+            restored = load_segment_checkpoint(settings, 0, expected_fingerprint="expected")
+            self.assertIsNotNone(restored)
 
 
 if __name__ == "__main__":

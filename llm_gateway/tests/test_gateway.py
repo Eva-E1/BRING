@@ -69,6 +69,10 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
                     "LLM_API_KEY=super-secret",
                     "LLM_BASE_URL=https://gateway.internal/v1",
                     "LLM_MAX_TOKENS=2048",
+                    "LLM_PARALLELISM=3",
+                    "LLM_MAX_PARALLELISM=6",
+                    "LLM_TIMEOUT_SECONDS=150",
+                    "LLM_STRUCTURED_OUTPUT_MODE=schema",
                 ]
             )
         )
@@ -80,6 +84,10 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(settings.model, "gpt-4o-mini")
         self.assertEqual(settings.base_url, "https://gateway.internal/v1")
         self.assertEqual(settings.max_tokens, 2048)
+        self.assertEqual(settings.startup_parallelism, 3)
+        self.assertEqual(settings.startup_parallelism_max, 6)
+        self.assertEqual(settings.request_timeout_seconds, 150)
+        self.assertEqual(settings.structured_output_mode, "schema")
         self.assertEqual(settings.masked_dict()["api_key"], "***")
 
     async def test_anyllm_config_uses_separate_settings_file_by_default(self):
@@ -155,6 +163,10 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
             default_headers={"x-team": "bring"},
             client_kwargs={"timeout": 30},
             request_kwargs={"top_p": 0.2},
+            startup_parallelism=3,
+            startup_parallelism_max=5,
+            request_timeout_seconds=45,
+            structured_output_mode="schema",
             extra_kwargs={"api_version": "2024-06-01", "custom_flag": True},
         )
 
@@ -166,6 +178,9 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(settings.build_client_kwargs()["timeout"], 30)
         self.assertEqual(settings.request_kwargs["top_p"], 0.2)
         self.assertTrue(settings.build_any_llm_kwargs()["custom_flag"])
+        self.assertEqual(config.startup_parallelism, 3)
+        self.assertEqual(config.startup_parallelism_max, 5)
+        self.assertEqual(config.structured_output_mode, "schema")
 
     async def test_provider_config_can_override_runtime_and_model_routing(self):
         config = AnyLLMConfig(
@@ -389,9 +404,11 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
         client = self.build_client(enable_cache=False)
         active_calls = 0
         peak_active_calls = 0
+        total_calls = 0
 
         async def fake_text_call(prompt: str) -> str:
-            nonlocal active_calls, peak_active_calls
+            nonlocal active_calls, peak_active_calls, total_calls
+            total_calls += 1
             active_calls += 1
             peak_active_calls = max(peak_active_calls, active_calls)
             try:
@@ -404,11 +421,12 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
 
         client._text_call = fake_text_call
 
-        parallelism = await client.calibrate_parallelism(max_parallelism=5, samples_per_level=1)
+        parallelism = await client.calibrate_parallelism(max_parallelism=8, samples_per_level=1)
 
         self.assertEqual(parallelism, 3)
         self.assertEqual(client.recommended_parallelism, 3)
         self.assertGreaterEqual(peak_active_calls, 3)
+        self.assertLessEqual(total_calls, 10)
 
     async def test_runtime_metrics_track_adaptive_parallelism(self):
         client = self.build_client(enable_cache=False)
@@ -426,6 +444,73 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertGreaterEqual(metrics.successes, 4)
         self.assertGreaterEqual(metrics.current_parallelism, 2)
         self.assertEqual(metrics.failures, 0)
+
+    async def test_client_uses_startup_parallelism_from_config(self):
+        client = self.build_client(
+            enable_cache=False,
+            startup_parallelism=3,
+            startup_parallelism_max=5,
+            request_timeout_seconds=77,
+        )
+
+        self.assertEqual(client.recommended_parallelism, 3)
+        self.assertEqual(client.runtime_metrics().max_parallelism, 5)
+        self.assertEqual(client._client_kwargs["timeout"], 77)
+
+    async def test_generate_deduplicates_parallel_identical_requests(self):
+        client = self.build_client(enable_cache=True)
+        text_calls: list[str] = []
+        prompt = f"same prompt {time.time_ns()}"
+
+        async def fake_text_call(prompt: str) -> str:
+            text_calls.append(prompt)
+            await asyncio.sleep(0.01)
+            return "OK"
+
+        client._text_call = fake_text_call
+
+        responses = await asyncio.gather(*(client.generate(prompt) for _ in range(4)))
+
+        self.assertEqual(len(text_calls), 1)
+        self.assertTrue(all(response.text == "OK" for response in responses))
+        self.assertTrue(all(response.provider == "openai" for response in responses))
+
+    async def test_plain_text_generation_passes_request_kwargs_to_provider(self):
+        captured_payloads: list[dict[str, object]] = []
+
+        class FakeCompletions:
+            async def create(self, **kwargs):
+                captured_payloads.append(kwargs)
+                return type(
+                    "Resp",
+                    (),
+                    {
+                        "choices": [
+                            type(
+                                "Choice",
+                                (),
+                                {"message": type("Msg", (), {"content": "OK"})()},
+                            )
+                        ]
+                    },
+                )()
+
+        class FakeClient:
+            def __init__(self):
+                self.chat = type("Chat", (), {"completions": FakeCompletions()})()
+
+        client = self.build_client(
+            enable_cache=False,
+            request_kwargs={"top_p": 0.1, "seed": 7},
+        )
+        client._plain_client = FakeClient()
+
+        response = await client.generate("hello")
+
+        self.assertEqual(response.text, "OK")
+        self.assertEqual(captured_payloads[0]["top_p"], 0.1)
+        self.assertEqual(captured_payloads[0]["seed"], 7)
+        self.assertEqual(captured_payloads[0]["messages"][0]["content"], "hello")
 
 
 if __name__ == "__main__":

@@ -27,6 +27,10 @@ class AnyLLMConfig(BaseModel):
     request_kwargs: Dict[str, Any] = Field(default_factory=dict)
     temperature: float = 0.7
     max_tokens: int = 1024
+    startup_parallelism: int = 1
+    startup_parallelism_max: int = 8
+    request_timeout_seconds: float = 90.0
+    structured_output_mode: str = "auto"
     extra_kwargs: Dict[str, Any] = Field(default_factory=dict)
     provider_config: Optional[ProviderConfig] = None
 
@@ -54,6 +58,10 @@ class AnyLLMConfig(BaseModel):
             "client_kwargs": dict(resolved_settings.client_kwargs),
             "request_kwargs": dict(resolved_settings.request_kwargs),
             "extra_kwargs": dict(resolved_settings.any_llm_kwargs),
+            "startup_parallelism": resolved_settings.startup_parallelism,
+            "startup_parallelism_max": resolved_settings.startup_parallelism_max,
+            "request_timeout_seconds": resolved_settings.request_timeout_seconds,
+            "structured_output_mode": resolved_settings.structured_output_mode,
             "provider_config": ProviderConfig.model_validate(
                 resolved_settings.provider_settings.model_dump()
             ),

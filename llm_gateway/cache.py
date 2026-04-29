@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 import time
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Optional
 
@@ -26,7 +27,7 @@ class AsyncTTLCache:
         ttl: int = 3600,
         persist_dir: Optional[str | Path] = None,
     ):
-        self._cache: dict[str, tuple[object, float, float]] = {}
+        self._cache: OrderedDict[str, tuple[object, float, float]] = OrderedDict()
         self._maxsize = maxsize
         self._ttl = ttl
         self._lock = asyncio.Lock()
@@ -44,7 +45,7 @@ class AsyncTTLCache:
                     del self._cache[key]
                     self._delete_persisted_key(key)
                     return None
-                self._cache[key] = (value, expiry_epoch, created_epoch)
+                self._cache.move_to_end(key)
                 return value
 
             persisted = self._load_persisted_key(key, now)
@@ -52,6 +53,7 @@ class AsyncTTLCache:
                 return None
             value, expiry_epoch, created_epoch = persisted
             self._cache[key] = (value, expiry_epoch, created_epoch)
+            self._cache.move_to_end(key)
             self._evict_if_needed(now)
             return value
 
@@ -60,6 +62,7 @@ class AsyncTTLCache:
             now = time.time()
             expiry_epoch = now + self._ttl
             self._cache[key] = (value, expiry_epoch, now)
+            self._cache.move_to_end(key)
             self._evict_if_needed(now)
             self._persist_key(key, value, expiry_epoch, now)
 
@@ -99,7 +102,7 @@ class AsyncTTLCache:
             self._delete_persisted_key(key)
 
         while len(self._cache) > self._maxsize:
-            oldest_key = min(self._cache.items(), key=lambda item: item[1][2])[0]
+            oldest_key = next(iter(self._cache))
             del self._cache[oldest_key]
             # Preserve persisted entries so crash recovery remains effective.
 
