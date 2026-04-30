@@ -28,10 +28,6 @@ class MemorySettings(BaseModel):
     )
     graphiti_max_coroutines: int = Field(default=10)
     graphiti_store_raw_episodes: bool = Field(default=True)
-    use_structured_extraction: bool = Field(
-        default=True,
-        description="Use the gateway's structured extraction flow for ontology-safe ingestion",
-    )
     bulk_ingestion_batch_size: int = Field(
         default=5,
         description="Max concurrent episode ingestion calls",
@@ -121,11 +117,6 @@ class MemorySettings(BaseModel):
                 merged,
                 "MEMORY_GRAPHITI_STORE_RAW_EPISODES",
                 default=cls.model_fields["graphiti_store_raw_episodes"].default,
-            ),
-            use_structured_extraction=read_bool(
-                merged,
-                "MEMORY_STRUCTURED_EXTRACTION",
-                default=cls.model_fields["use_structured_extraction"].default,
             ),
             bulk_ingestion_batch_size=read_int(
                 merged,

@@ -25,7 +25,7 @@
 - [Getting Started](#-getting-started)
 - [CLI Workflow](#-cli-workflow)
 - [Portable Memory Databases](#-portable-memory-databases)
-- [Dataset Pipeline: Mushoku Tensei](#-dataset-pipeline-mushoku-tensei)
+- [Companion Builders](#-companion-builders)
 - [Project Layout](#-project-layout)
 - [Contributing](#-contributing)
 
@@ -94,8 +94,8 @@ BRING already includes several coordinated features that are easy to miss if you
 - **Bi-temporal graph memory** with normalized search and timeline queries
 - **Portable multi-database memory** with isolated namespaces and manifests
 - **Interactive CLI** for guided setup and database management
-- **Reference dataset ingestion pipeline** in `mushoku_tensei/`
 - **Archive export/import/clone workflows** for sharing databases across projects
+- **Clean separation** between the BRING runtime and external database-builder projects
 
 ---
 
@@ -113,13 +113,11 @@ The project is being developed with a modular architecture and a strong separati
 | **Graph Wrapper** | `memory/graph.py` | Initializes Kuzu + Graphiti and wires in custom LLM/embedder adapters. |
 | **Portable Databases** | `memory/database.py` | Database manifests, archive export/import, and safe clone workflows. |
 | **Ontology** | `memory/ontology.py` | Typed entity and relationship models for graph ingestion. |
-| **Extraction** | `memory/extraction.py` | Structured ontology-safe extraction using the gateway. |
 | **Bi-temporal Memory** | `memory/chronicler.py` | Point-in-time queries and timeline-aware access patterns. |
 | **Agent Contexts** | `memory/actor.py`, `memory/director.py` | Role-specific narrative and memory retrieval helpers. |
 | **Maintenance** | `memory/maintenance.py` | Batch deduplication, search result normalization, and scoped cache invalidation. |
 | **Project CLI** | `bring_cli.py` | Guided setup, config inspection, and database lifecycle commands. |
 | **Shared Config Helpers** | `bring_settings.py`, `bring_cli_support.py` | Clean settings parsing, smart defaults, provider inference, and env generation. |
-| **Dataset Pipeline** | `mushoku_tensei/` | PDF ingestion, segmentation, time estimation, extended ontology extraction, and portable DB packaging. |
 
 ### 🔧 Tech Stack & Foundation
 
@@ -129,7 +127,6 @@ The project is being developed with a modular architecture and a strong separati
 - 🛡️ **`pydantic`** for typed config and ontology models
 - 🔄 **`tenacity`** for retry handling
 - 🧮 **`tiktoken`** for token estimation
-- 📄 **`pdfplumber`** for PDF dataset ingestion
 - 🚀 **`asyncio`** throughout the runtime design
 
 ### 🚧 Work in Progress
@@ -275,33 +272,15 @@ This is especially useful when one user creates a dataset-specific database, sha
 
 ---
 
-## 📚 Dataset Pipeline: Mushoku Tensei
+## 🔌 External Builders
 
-The `mushoku_tensei/` section is a reference pipeline for ingesting a real narrative corpus into BRING memory.
+BRING consumes prebuilt memory databases and portable archives.
 
-It includes:
+Database-builder projects now live outside the main runtime, which keeps BRING focused on:
 
-- English PDF extraction via `pdfplumber`
-- heading-aware segmentation
-- story-time estimation from age/year markers
-- an extended ontology for abilities, arcs, concepts, world rules, and historical events
-- structured extraction that is preserved through ingestion
-- packaging into a reusable portable BRING memory database
-
-Run it with:
-
-```bash
-python -m mushoku_tensei.ingest_v2
-```
-
-Recommended database config:
-
-```bash
-MEMORY_DATABASE_ROOT=./memory_databases
-MEMORY_DATABASE_ID=mushoku-tensei-v2
-```
-
-For module-specific details, see `mushoku_tensei/README.md`.
+- using prebuilt databases
+- importing and cloning shared archives
+- querying memory without carrying ingestion-specific code
 
 ---
 
@@ -314,7 +293,6 @@ BRING/
   bring_settings.py
   llm_gateway/
   memory/
-  mushoku_tensei/
   requirements.txt
   .bring.env.example
 ```
@@ -323,7 +301,7 @@ High-level responsibilities:
 
 - `llm_gateway/` handles provider access and structured generation
 - `memory/` handles graph persistence, search, and portable database workflows
-- `mushoku_tensei/` demonstrates how to build a dataset-specific ingestion pipeline on top of BRING
+- external builder projects produce BRING-compatible databases and archives
 
 ---
 
@@ -332,7 +310,7 @@ High-level responsibilities:
 We are open to ideas, fixes, and extensions. Useful contribution areas include:
 
 - additional providers and embedding backends
-- more dataset pipelines
+- stronger database import/export tooling
 - stronger manifest compatibility/version checks
 - higher-level story orchestration loops
 - APIs and frontend interfaces for end-user interaction

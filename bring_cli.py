@@ -247,7 +247,6 @@ def setup(
         "MEMORY_DATABASE_ID": db_id,
         "MEMORY_GRAPHITI_MAX_COROUTINES": str(startup_profile.graphiti_max_coroutines),
         "MEMORY_GRAPHITI_STORE_RAW_EPISODES": "true",
-        "MEMORY_STRUCTURED_EXTRACTION": "true",
         "MEMORY_BULK_BATCH": str(startup_profile.memory_bulk_batch),
         "MEMORY_SEARCH_RESULT_LIMIT": "50",
         "MEMORY_TIMELINE_WINDOW": "30",

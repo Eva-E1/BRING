@@ -13,7 +13,6 @@ from llm_gateway.client import LLMClient
 
 from .config import MemorySettings, get_settings
 from .database import MemoryDatabaseManager
-from .extraction import structured_extraction
 from .graph import MemoryGraph
 from .maintenance import MemoryMaintenance
 

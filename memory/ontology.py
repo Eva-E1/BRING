@@ -1,7 +1,7 @@
 """BRING ontology – Pydantic models used by Graphiti and the custom extraction pipeline."""
 
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
 from pydantic import BaseModel, Field
 
 

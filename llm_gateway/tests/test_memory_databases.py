@@ -1,6 +1,7 @@
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -8,11 +9,35 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from memory.config import MemorySettings
 from memory.database import MemoryDatabaseManager
 from memory.ontology import ENTITY_TYPES
-from mushoku_tensei.graph_builder import build_layered_graph
-from mushoku_tensei.ontology_extended import ENTITY_TYPES_EXTENDED
 
 
 class MemoryDatabaseTests(unittest.TestCase):
+    def _build_episode_payload(self, segments: list[dict], group_id: str = "default") -> list[dict]:
+        payload = []
+        for index, segment in enumerate(segments):
+            entities = []
+            for entity in segment.get("entities", []):
+                entity_copy = dict(entity)
+                entity_copy["attributes"] = dict(entity.get("attributes", {}))
+                entity_copy["attributes"].setdefault("layer", "fact")
+                entities.append(entity_copy)
+            payload.append(
+                {
+                    "name": f"segment_{index + 1:04d}",
+                    "body": segment["text"],
+                    "reference_time": segment.get("story_time", datetime(1, 1, 1) + timedelta(days=index)),
+                    "group_id": group_id,
+                    "metadata": {
+                        "volume": segment.get("volume"),
+                        "chapter": segment.get("chapter"),
+                        "time_markers": list(segment.get("time_markers", [])),
+                        "entities": entities,
+                        "edges": list(segment.get("edges", [])),
+                    },
+                }
+            )
+        return payload
+
     def test_memory_settings_build_isolated_database_path_from_database_id(self):
         settings = MemorySettings(database_root=Path("/tmp/bring-dbs"), database_id="Mushoku Tensei / V2")
 
@@ -51,8 +76,8 @@ class MemoryDatabaseTests(unittest.TestCase):
             self.assertTrue((clone.kuzu_path / "data.bin").exists())
             self.assertEqual(clone.load_manifest().database_id, "clone-db")
 
-    def test_graph_builder_preserves_original_text_and_precomputed_metadata(self):
-        payload = build_layered_graph(
+    def test_episode_payload_preserves_original_text_and_precomputed_metadata(self):
+        payload = self._build_episode_payload(
             [
                 {
                     "index": 0,
@@ -82,12 +107,11 @@ class MemoryDatabaseTests(unittest.TestCase):
     def test_entity_type_models_do_not_use_graphiti_reserved_fields(self):
         reserved = {"uuid", "name", "group_id", "labels", "created_at", "name_embedding", "summary", "attributes"}
 
-        for registry in (ENTITY_TYPES, ENTITY_TYPES_EXTENDED):
-            for entity_name, entity_model in registry.items():
-                self.assertTrue(
-                    reserved.isdisjoint(entity_model.model_fields.keys()),
-                    msg=f"{entity_name} uses reserved Graphiti fields",
-                )
+        for entity_name, entity_model in ENTITY_TYPES.items():
+            self.assertTrue(
+                reserved.isdisjoint(entity_model.model_fields.keys()),
+                msg=f"{entity_name} uses reserved Graphiti fields",
+            )
 
 
 if __name__ == "__main__":

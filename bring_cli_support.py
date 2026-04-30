@@ -177,7 +177,6 @@ def build_env_contents(values: Dict[str, str]) -> str:
                 "MEMORY_DATABASE_ID",
                 "MEMORY_GRAPHITI_MAX_COROUTINES",
                 "MEMORY_GRAPHITI_STORE_RAW_EPISODES",
-                "MEMORY_STRUCTURED_EXTRACTION",
                 "MEMORY_BULK_BATCH",
                 "MEMORY_SEARCH_RESULT_LIMIT",
                 "MEMORY_TIMELINE_WINDOW",

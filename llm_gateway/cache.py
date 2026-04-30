@@ -6,7 +6,7 @@ import json
 import time
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 
 def default_cache_dir() -> Path:
