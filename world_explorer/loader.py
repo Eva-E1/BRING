@@ -1,0 +1,27 @@
+"""Load entities from JSON and return a list."""
+import json
+from pathlib import Path
+from typing import List
+from .models import Entity, LayeredProfile
+
+def load_entities(db_path: Path) -> List[Entity]:
+    file_path = db_path / "entities.json"
+    if not file_path.exists():
+        raise FileNotFoundError(f"entities.json not found at {file_path}")
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        raw = json.load(f)
+
+    entities = []
+    for item in raw:
+        profile = LayeredProfile.from_dict(item["profile"])
+        entities.append(Entity(
+            uid=item["uid"],
+            name=item["name"],
+            entity_type=item["entity_type"],
+            profile=profile,
+            group_id=item.get("group_id", ""),
+            created_at=item.get("created_at", 0.0),
+            updated_at=item.get("updated_at", 0.0),
+        ))
+    return entities

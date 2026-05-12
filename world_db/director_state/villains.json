@@ -1,0 +1,49 @@
+{
+  "The Shadow": {
+    "description": "A mysterious entity seeking to plunge the world into darkness.",
+    "current_phase": "plotting",
+    "progress_clock": 7,
+    "target_clock": 8,
+    "memories": [
+      {
+        "timestamp": "2026-05-12T20:30:06.341962",
+        "description": "Advanced plotting phase",
+        "involved_entities": [
+          "The Shadow"
+        ],
+        "success": true,
+        "consequence": "Progress: 2/8"
+      },
+      {
+        "timestamp": "2026-05-12T21:00:06.341962",
+        "description": "Advanced plotting phase",
+        "involved_entities": [
+          "The Shadow"
+        ],
+        "success": true,
+        "consequence": "Progress: 4/8"
+      },
+      {
+        "timestamp": "2026-05-12T21:30:06.341962",
+        "description": "Advanced plotting phase",
+        "involved_entities": [
+          "The Shadow"
+        ],
+        "success": true,
+        "consequence": "Progress: 5/8"
+      },
+      {
+        "timestamp": "2026-05-12T22:00:06.341962",
+        "description": "Advanced plotting phase",
+        "involved_entities": [
+          "The Shadow"
+        ],
+        "success": true,
+        "consequence": "Progress: 7/8"
+      }
+    ],
+    "minions": [],
+    "secret_base": null,
+    "ultimate_goal": "Extinguish all light sources."
+  }
+}

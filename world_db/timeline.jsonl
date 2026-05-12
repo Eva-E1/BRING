@@ -1,0 +1,12 @@
+{"id": "b18329bb-6c2d-4add-a4d2-0515cd06a7f2", "timestamp": "2026-05-12T21:00:06.341962", "group": "villain", "description": "The Shadow is planning: theft"}
+{"id": "bad73a4e-8c97-4c27-8e70-4b0e99f8118c", "timestamp": "2026-05-12T21:00:06.341962", "group": "villain", "description": "[Villain] Shadow's Target \u2013 Shadow targets Lyra Quill. Wants soul. Varin Lume, Lysandra may interfere."}
+{"id": "d6f88c0b-2bbf-484b-aa80-da2c92cb7093", "timestamp": "2026-05-12T21:00:06.341962", "group": "narrative", "description": "Shadow moved to Lyra Quill's position"}
+{"id": "dacf94f0-dcea-47ed-9829-9fd42c1bf2ae", "timestamp": "2026-05-12T21:00:06.341962", "group": "narrative", "description": "Varin Lume moved to intervene"}
+{"id": "61279a44-732a-4fa1-bd88-eaf6a2d3b042", "timestamp": "2026-05-12T21:00:06.341962", "group": "narrative", "description": "Lysandra moved to protect Lyra"}
+{"id": "6edcab7a-cb46-4377-8623-d55450eb588a", "timestamp": "2026-05-12T21:00:06.341962", "group": "director", "description": "[Director] Major beat: Shadow's Grasp \u2013 The Shadow closes in on Lyra Quill, intent on claiming her soul. Varin Lume and Lysandra sense the danger approaching."}
+{"id": "495bf862-ecc1-464c-bc1b-586789245a77", "timestamp": "2026-05-12T21:00:06.341962", "group": "narrative", "description": "Shadow moved to Lyra Quill's position"}
+{"id": "e485649c-9381-4d7e-a964-30ea3b2d233a", "timestamp": "2026-05-12T21:00:06.341962", "group": "director", "description": "[Director] Scheduled beat: Shadow's Clutch \u2013 Shadow reaches Lyra Quill, tendrils of darkness coiling around her. Varin Lume and Lysandra arrive but hesitate, sensing soul-stuff being pulled. Lyra screams, voice cracking with pain."}
+{"id": "0d8b5826-c5f5-4e54-ae59-445e302f73cf", "timestamp": "2026-05-12T20:14:53.326105", "group": "start", "description": "Story begins: Kaelen in Silverwood forest at dawn"}
+{"id": "cb8887e9-0607-48d6-b67a-5e0f0020e447", "timestamp": "2026-05-12T20:14:53.326105", "group": "narrative", "description": "Shadow moved to Lyra Quill's position"}
+{"id": "76056a63-18db-42e8-a7e9-8c9ab3b60fd3", "timestamp": "2026-05-12T20:14:53.326105", "group": "narrative", "description": "Shadow discovered soul-thread at Lyra Quill's position"}
+{"id": "0dd01881-5730-4169-91d0-3f39bdd54a6e", "timestamp": "2026-05-12T20:14:53.326105", "group": "story_events", "description": "Shadow closes in on Lyra Quill. Tendrils of darkness coil around her; Lyra's scream rends the air. Varin Lume and Lysandra arrive, hesitation heavy as soul-stuff pulls toward Shadow."}
