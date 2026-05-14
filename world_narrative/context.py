@@ -46,7 +46,10 @@ class NarrativeContext:
         self.graph_store.boot()
 
         # Narrative components
-        self.npc_mgr = OptimizedMemoryStore(db_path / "memory_store", self.gm, self.llm)
+        self.npc_mgr = OptimizedMemoryStore(
+            db_path / "memory_store", self.gm, self.llm_queue, self.llm,
+            max_embedding_cache_size=1000
+        )
         self.chronicler = Chronicler(db_path / "timeline.jsonl")
         self.validator = WorldValidator(self.gm, self.world_frame)
         self.quest_mgr = QuestManager(db_path / "quests.json")
@@ -55,7 +58,7 @@ class NarrativeContext:
 
         # Core engines - pass graph_store for intelligence integration
         self.story_engine = StoryEngine(
-            self.llm, self.gm, self.npc_mgr, self.chronicler, self.validator,
+            self.llm_queue, self.gm, self.npc_mgr, self.chronicler, self.validator,
             self.world_frame["world_name"], self.world_frame.get("world_rules", []),
             self.quest_mgr, self.social_sim, self.clock,
             graph_store=self.graph_store
@@ -85,22 +88,6 @@ class NarrativeContext:
         self.user_agent = UserAgent(
             self.llm, self.gm, self.npc_mgr, self.chronicler, self.director,
             self.story_engine, self.validator, self.quest_mgr, db_path / "sessions"
-        )
-
-        # World Interface - Advanced interaction pipeline
-        self.world_memory = WorldMemory(db_path / "world_memory", self.llm)
-        self.interaction_pipeline = InteractionPipeline(
-            llm=self.llm,
-            gm=self.gm,
-            npc_mgr=self.npc_mgr,
-            chronicler=self.chronicler,
-            director=self.director,
-            story_engine=self.story_engine,
-            validator=self.validator,
-            quest_mgr=self.quest_mgr,
-            session_dir=db_path / "interaction_sessions",
-            world_frame=self.world_frame,
-            world_memory=self.world_memory,
         )
 
         # Inject story_engine into clock for callback support
@@ -194,7 +181,7 @@ class NarrativeContext:
         engine = RoleplayEngine(
             db_path=self.db_path,
             world_frame=self.world_frame,
-            llm=self.llm,
+            llm_queue=self.llm_queue,
             gm=self.gm,
             npc_mgr=self.npc_mgr,
             chronicler=self.chronicler,

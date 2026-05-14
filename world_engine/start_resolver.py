@@ -16,6 +16,7 @@ from difflib import get_close_matches
 from world_builder.graph_manager import GraphManager
 from world_narrative.memory_optimized import OptimizedMemoryStore
 from world_narrative.director import Director
+from world_director.models import TaskPriority
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +103,7 @@ If not present, leave null.
 User input: "{user_spec}"
 """
         try:
-            result = await self.director.story_engine.llm.generate_json(prompt, temperature=0.3)
+            result = await self.director.story_engine.llm_queue.generate_json(prompt, priority=TaskPriority.HIGH, temperature=0.3)
             return StartingPoint(
                 character=result.get("character"),
                 location=result.get("location"),

@@ -9,8 +9,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from world_builder.llm import LLMClient
 from world_builder.graph_manager import GraphManager
+from world_core.llm_queue import GlobalLLMQueue
+from world_director.models import TaskPriority
 from world_explorer.store import GraphStore
 from .memory_optimized import OptimizedMemoryStore
 from .chronicler import Chronicler
@@ -53,7 +54,7 @@ Respond with valid JSON only.
 class StoryEngine:
     def __init__(
         self,
-        llm: LLMClient,
+        llm_queue: GlobalLLMQueue,
         gm: GraphManager,
         npc_mgr: OptimizedMemoryStore,
         chronicler: Chronicler,
@@ -65,7 +66,7 @@ class StoryEngine:
         clock: WorldClock,
         graph_store: Optional[GraphStore] = None,
     ):
-        self.llm = llm
+        self.llm_queue = llm_queue
         self.gm = gm
         self.npc_mgr = npc_mgr
         self.chronicler = chronicler
@@ -96,7 +97,7 @@ class StoryEngine:
             from world_explorer.builder_integration import BuilderInterface
             try:
                 builder = BuilderInterface(gm=self.gm)
-                self._rule_checker = RuleChecker(self.graph_store, builder)
+                self._rule_checker = RuleChecker(self.graph_store, builder, llm_queue=self.llm_queue)
             except Exception as e:
                 logger.warning(f"Could not initialize RuleChecker: {e}")
                 self._rule_checker = None
@@ -157,7 +158,9 @@ class StoryEngine:
             rules=rules_text,
         )
         try:
-            result = await self.llm.generate_json(prompt, temperature=0.8)
+            result = await self.llm_queue.generate_json(
+                prompt, priority=TaskPriority.LOW, temperature=0.8
+            )
             # Ensure involved_entities includes our enriched set
             if "involved_entities" not in result:
                 result["involved_entities"] = enriched_entities

@@ -2,10 +2,12 @@
 import asyncio
 import time
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from rich.console import Console
 from world_explorer.store import GraphStore
 from world_explorer.builder_integration import BuilderInterface
+from world_core.llm_queue import GlobalLLMQueue
+from world_director.models import TaskPriority
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -39,13 +41,22 @@ def validate_relationship_sanity(src_entity, rel_type, target_entity) -> List[st
 
 class RuleChecker:
     def __init__(self, store: GraphStore, builder: BuilderInterface,
+                 llm_queue: Optional[GlobalLLMQueue] = None,
                  max_concurrent_llm: int = 4, base_retry_delay: float = 1.0):
         self.store = store
         self.builder = builder
+        self.llm_queue = llm_queue
         self.entities = store.entities
         self.rules = self._get_rules_text()
         self.semaphore = asyncio.Semaphore(max_concurrent_llm)
         self.base_retry_delay = base_retry_delay
+
+    async def _generate_json(self, prompt: str, temperature: float = 0.3) -> dict:
+        """Generate JSON using queue if available, otherwise fallback to raw LLM."""
+        if self.llm_queue:
+            return await self.llm_queue.generate_json(prompt, priority=TaskPriority.LOW, temperature=temperature)
+        # Fallback to raw LLM for backward compatibility
+        return await self.builder.builder.gen.llm.generate_json(prompt, temperature=temperature)
 
     def _get_rules_text(self) -> str:
         wf = self.builder.builder.world_frame
@@ -105,7 +116,7 @@ Entity data:
         for attempt in range(3):
             async with self.semaphore:
                 try:
-                    result = await self.builder.builder.gen.llm.generate_json(prompt, temperature=0.3)
+                    result = await self._generate_json(prompt, temperature=0.3)
                     if result.get("violation"):
                         return [{
                             "uid": ent.uid,
@@ -165,7 +176,7 @@ Return a JSON object with keys "l2" and "l3" containing the fixed data.
         for attempt in range(3):
             async with self.semaphore:
                 try:
-                    result = await self.builder.builder.gen.llm.generate_json(prompt, temperature=0.3)
+                    result = await self._generate_json(prompt, temperature=0.3)
                     new_l2 = result.get("l2")
                     new_l3 = result.get("l3")
                     if new_l2 and new_l2 != ent.profile.l2:

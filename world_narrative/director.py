@@ -251,6 +251,10 @@ class Director:
         elif entity_type == "item":
             name = await self.evolver.add_random_item(data.get("item_type", "artifact"))
 
+        # Persist graph changes after adding entity
+        if self.graph_store:
+            self.graph_store.save_graph()
+
     async def _handle_edit_entity(self, task: DirectorTask):
         """Edit an existing entity's L2 or L3 data."""
         uid = task.data.get("uid")
@@ -259,7 +263,8 @@ class Director:
         if not uid:
             return
         success = self.gm.store.update_entity_level(uid, layer, new_data)
-        if success:
+        if success and self.graph_store:
+            self.graph_store.save_graph()
             await self.chronicler.log_event(f"Updated {layer} for {uid}", self.clock.current_time, group="director")
 
     async def _handle_generate_event(self, task: DirectorTask):

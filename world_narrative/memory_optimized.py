@@ -38,6 +38,8 @@ except ImportError:
 from world_builder.graph_manager import GraphManager
 from world_builder.llm import LLMClient
 from world_narrative.chronicler import Chronicler
+from world_core.llm_queue import GlobalLLMQueue
+from world_director.models import TaskPriority
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +100,7 @@ class MemoryOptimizer:
     def __init__(
         self,
         store: "OptimizedMemoryStore",
-        llm: LLMClient,
+        llm_queue: GlobalLLMQueue,
         run_interval_seconds: int = 300,
         short_term_limit: int = 20,
         max_long_term: int = 500,
@@ -107,7 +109,7 @@ class MemoryOptimizer:
         max_embedding_cache_size: int = 1000,
     ):
         self.store = store
-        self.llm = llm
+        self.llm_queue = llm_queue
         self.run_interval = run_interval_seconds
         self.short_term_limit = short_term_limit
         self.max_long_term = max_long_term
@@ -213,7 +215,7 @@ Episodes:
 {episodes_text}
 """
             try:
-                result = await self.llm.generate_json(prompt, temperature=0.3)
+                result = await self.llm_queue.generate_json(prompt, priority=TaskPriority.LOW, temperature=0.3)
                 facts = result if isinstance(result, list) else []
                 for fact in facts:
                     # Check if fact already exists in semantic memory
@@ -277,15 +279,17 @@ class OptimizedMemoryStore:
     - Fast similarity search for narrative retrieval
     """
 
-    def __init__(self, state_path: Path, gm: GraphManager, llm: LLMClient):
+    def __init__(self, state_path: Path, gm: GraphManager, llm_queue: GlobalLLMQueue, llm: LLMClient = None,
+                 max_embedding_cache_size: int = 1000):
         self.state_path = state_path
         self.gm = gm
-        self.llm = llm
+        self.llm = llm  # Keep raw LLM for embeddings (not handled by queue)
+        self.llm_queue = llm_queue  # Queue for text generation
         self._npcs: Dict[str, NPCProfile] = {}
         self._embedding_cache_dir = state_path / "embeddings"
         self._embedding_cache_dir.mkdir(parents=True, exist_ok=True)
         self._load()
-        self.optimizer = MemoryOptimizer(self, llm)
+        self.optimizer = MemoryOptimizer(self, llm_queue, max_embedding_cache_size=max_embedding_cache_size)
         self._embedding_lock = asyncio.Lock()
 
     # ------------------------------------------------------------------

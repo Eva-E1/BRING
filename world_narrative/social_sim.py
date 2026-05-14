@@ -120,9 +120,14 @@ Generate a short interaction (2‑3 sentences) that could happen between them.
 The interaction should be consistent with their personalities and world rules.
 Return JSON: {{"interaction": "text", "relationship_delta": integer between -3 and 3}}
 """
-        llm = self.ctx.llm
+        # Use queue with LOW priority for background social simulation
+        llm_queue = getattr(self.ctx, 'llm_queue', None)
         try:
-            result = await llm.generate_json(prompt, temperature=0.7)
+            if llm_queue:
+                from world_director.models import TaskPriority
+                result = await llm_queue.generate_json(prompt, priority=TaskPriority.LOW, temperature=0.7)
+            else:
+                result = await self.ctx.llm.generate_json(prompt, temperature=0.7)
             delta = result.get("relationship_delta", 0)
             interaction = result.get("interaction", "")
 

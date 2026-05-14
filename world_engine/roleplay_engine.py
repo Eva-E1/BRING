@@ -9,8 +9,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
-from world_builder.llm import LLMClient
 from world_builder.graph_manager import GraphManager
+from world_core.llm_queue import GlobalLLMQueue
 from world_explorer.store import GraphStore
 from world_narrative.memory_optimized import OptimizedMemoryStore
 from world_narrative.chronicler import Chronicler
@@ -40,7 +40,7 @@ class RoleplayEngine:
         self,
         db_path: Path,
         world_frame: dict,
-        llm: LLMClient,
+        llm_queue: GlobalLLMQueue,
         gm: GraphManager,
         npc_mgr: OptimizedMemoryStore,
         chronicler: Chronicler,
@@ -53,7 +53,7 @@ class RoleplayEngine:
     ):
         self.db_path = db_path
         self.world_frame = world_frame
-        self.llm = llm
+        self.llm_queue = llm_queue
         self.gm = gm
         self.npc_mgr = npc_mgr
         self.chronicler = chronicler
@@ -64,11 +64,11 @@ class RoleplayEngine:
         self.clock = clock
         self.graph_store = graph_store
 
-        # Agents
-        self.narrator = NarratorAgent(llm)
-        self.npc_agent = NPCAgent(llm)
-        self.scene_agent = SceneAgent(llm)
-        self.director_agent = DirectorAgent(llm)
+        # Agents - pass the queue with HIGH priority for user-facing calls
+        self.narrator = NarratorAgent(llm_queue)
+        self.npc_agent = NPCAgent(llm_queue)
+        self.scene_agent = SceneAgent(llm_queue)
+        self.director_agent = DirectorAgent(llm_queue)
 
         # Memory manager for conversation
         self.memory = MemoryManager(db_path / "roleplay_memory.json")
