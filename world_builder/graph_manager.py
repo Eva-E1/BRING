@@ -14,9 +14,11 @@ logger = logging.getLogger(__name__)
 
 
 class GraphManager:
-    def __init__(self, entity_store_path: Path, graph_engine: Optional[GraphEngine] = None):
+    def __init__(self, entity_store_path: Path, graph_engine: Optional[GraphEngine] = None, builder=None):
         self.store = EntityStore(entity_store_path)
         self.graph = graph_engine or GraphEngine()
+        self.builder = builder  # Store reference for repairer
+        self._repairer = None
         self._build_graph_from_store()
 
     def _build_graph_from_store(self):
@@ -41,11 +43,11 @@ class GraphManager:
         if not name:
             return None
 
-        # 1. Direct UID match
-        if name in self.graph.nodes:
+        # 1. Direct UID match in store (check store first, as graph is built incrementally)
+        if self.store.get(name):
             return name
 
-        # 2. Case‑insensitive full name
+        # 2. Case‑insensitive match in store
         low = name.lower()
         for node in self.store.all_nodes():
             if node.name.lower() == low:
@@ -158,3 +160,52 @@ class GraphManager:
 
     def build_full_graph(self) -> GraphEngine:
         return self.graph
+
+    async def repair_all_relationships(self, intelligent: bool = True) -> Dict[str, int]:
+        """Repair all relationships in the store."""
+        if intelligent and self.builder:
+            # Lazy import to avoid circular dependency
+            from world_intelligence.relationship_repairer import RelationshipRepairer
+            if not self._repairer:
+                self._repairer = RelationshipRepairer(self, self.builder)
+            return await self._repairer.repair_all_relationships()
+        else:
+            # Fallback to simple repair (create placeholders)
+            stats = {"resolved": 0, "merged": 0, "created": 0, "failed": 0, "skipped": 0}
+            for node in self.store.all_nodes():
+                rels = node.profile.l1.get("relationships", [])
+                new_rels = []
+                for rel in rels:
+                    target_ref = rel.get("target")
+                    if not target_ref:
+                        continue
+                    target_uid = self._resolve_entity_uid(target_ref)
+                    if target_uid is None:
+                        target_uid = await self._create_placeholder(target_ref)
+                        if target_uid:
+                            stats["created"] += 1
+                        else:
+                            stats["failed"] += 1
+                    if target_uid:
+                        new_rels.append({"target": target_uid, "type": rel.get("type")})
+                    else:
+                        stats["skipped"] += 1
+                if len(new_rels) != len(rels):
+                    node.profile.l1["relationships"] = new_rels
+                    self.store.update_entity_level(node.uid, "l1", node.profile.l1)
+            return stats
+
+    async def _create_placeholder(self, target_ref: str) -> Optional[str]:
+        """Create a placeholder entity for an unknown reference."""
+        name = target_ref.split(":")[-1] if ":" in target_ref else target_ref
+        placeholder_uid = f"Unknown:{name}"
+        if not self.store.get(placeholder_uid):
+            profile = LayeredProfile(l1={
+                "name": name,
+                "type": "Unknown",
+                "summary": f"Placeholder for missing entity '{target_ref}'",
+                "tags": ["placeholder"]
+            })
+            node = await self.add_entity(name, "Unknown", profile, group_id="_placeholders")
+            return node.uid
+        return placeholder_uid

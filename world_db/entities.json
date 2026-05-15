@@ -1456,7 +1456,7 @@
     },
     "group_id": "characters",
     "created_at": 1778352061.9509668,
-    "updated_at": 1778352243.4313233
+    "updated_at": 1778834024.0462878
   },
   {
     "uid": "Character:Elara Meadowlight",
@@ -3214,5 +3214,25 @@
     "group_id": "world_rules",
     "created_at": 1778432866.1071908,
     "updated_at": 1778436741.7200463
+  },
+  {
+    "uid": "Faction:Faction_612",
+    "name": "Faction_612",
+    "entity_type": "Faction",
+    "profile": {
+      "l1": {
+        "name": "Faction_612",
+        "type": "Faction",
+        "group": "factions",
+        "summary": "Newly created faction",
+        "tags": [],
+        "relationships": []
+      },
+      "l2": {},
+      "l3": {}
+    },
+    "group_id": "factions",
+    "created_at": 1778833746.224768,
+    "updated_at": 1778833746.2247694
   }
 ]

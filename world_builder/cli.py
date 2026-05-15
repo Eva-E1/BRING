@@ -412,5 +412,47 @@ def validate(db_path: Optional[Path] = typer.Option(None)):
     else:
         console.print("[success]✅ All references valid.[/]")
 
+@app.command()
+def repair(
+    intelligent: bool = typer.Option(True, "--intelligent/--simple", help="Use intelligent fuzzy matching"),
+    merge: bool = typer.Option(True, "--merge/--no-merge", help="Merge highly similar entities"),
+    create: bool = typer.Option(True, "--create/--no-create", help="Create missing entities automatically"),
+    db_path: Optional[Path] = typer.Option(None),
+):
+    """Repair invalid relationships using progressive fuzzy matching."""
+    db = db_path or DATABASE_PATH
+    llm = LLMClient()
+    gm = GraphManager(entity_store_path=get_entity_store_path(db))
+    frame_path = get_world_frame_path(db)
+    builder = WorldBuilder(llm, gm, num_episodes=0, world_frame_path=frame_path)
+    # Attach builder to gm for repairer
+    gm.builder = builder
+
+    def run():
+        async def do_repair():
+            if intelligent:
+                console.print("[cyan]Intelligent repair with fuzzy matching...[/]")
+                # Configure repairer with auto_merge/auto_create
+                from world_intelligence.relationship_repairer import RelationshipRepairer
+                repairer = RelationshipRepairer(
+                    gm, builder, auto_merge=merge, auto_create=create
+                )
+                stats = await repairer.repair_all_relationships()
+            else:
+                console.print("[cyan]Simple repair (placeholders only)...[/]")
+                stats = await gm.repair_all_relationships(intelligent=False)
+
+            console.print(f"[green]✓ Repair complete[/]")
+            console.print(f"  Resolved: {stats.get('resolved', 0)}")
+            console.print(f"  Merged: {stats.get('merged', 0)}")
+            console.print(f"  Created: {stats.get('created', 0)}")
+            console.print(f"  Failed: {stats.get('failed', 0)}")
+            console.print(f"  Skipped: {stats.get('skipped', 0)}")
+
+        asyncio.run(do_repair())
+
+    run()
+
+
 if __name__ == "__main__":
     app()

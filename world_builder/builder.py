@@ -418,6 +418,13 @@ class WorldBuilder:
         await self._save_world_frame()
         return node
 
+    async def repair_relationships(self, intelligent: bool = True) -> dict:
+        """Repair invalid relationships in the world."""
+        logger.info("Starting relationship repair...")
+        stats = await self.gm.repair_all_relationships(intelligent=intelligent)
+        logger.info(f"Repair complete: {stats}")
+        return stats
+
     def _get_rules_text(self) -> str:
         if not self.world_frame: return ""
         return "\n".join(f"- {r['name']}: {r['description']}" for r in self.world_frame.get("world_rules", []))
