@@ -1,18 +1,18 @@
-/home/ali/Lab/world_director/world_evolver.py
-```
-
-```python
+"""Director module for world evolution and story arcs."""
 from __future__ import annotations
+
 import logging
 import random
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from datetime import datetime
 
 from world_builder.graph_manager import GraphManager
 from world_builder.builder import WorldBuilder
 from world_builder.llm import LLMClient
-from world_narrative.memory_optimized import OptimizedMemoryStore
 from world_narrative.chronicler import Chronicler
+
+if TYPE_CHECKING:
+    from world_narrative.memory_optimized import OptimizedMemoryStore
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class WorldEvolver:
         self,
         gm: GraphManager,
         builder: WorldBuilder,
-        npc_mgr: OptimizedMemoryStore,
+        npc_mgr: "OptimizedMemoryStore",
         chronicler: Chronicler,
         llm: LLMClient,
     ):

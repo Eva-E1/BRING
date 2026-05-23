@@ -1,9 +1,3 @@
-/home/ali/Lab/world_engine/start_resolver.py
-```
-
-```python
-"""Allows user to specify a starting point in the story."""
-
 from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime

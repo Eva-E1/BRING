@@ -94,7 +94,7 @@ def generate_scene(
     store = get_store(db_path)
     builder = get_builder(db_path)
     gen = SceneGenerator(store, builder)
-    scene = gen.generate_scene_from_cluster(uid)
+    scene = asyncio.run(gen.generate_scene_from_cluster(uid))
     console.print_json(data=scene)
 
 @app.command()

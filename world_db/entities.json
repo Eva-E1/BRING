@@ -92,7 +92,12 @@
         "tags": [
           "guild"
         ],
-        "relationships": []
+        "relationships": [
+          {
+            "target": "Location:Lumeris",
+            "type": "controls"
+          }
+        ]
       },
       "l2": {
         "description": "Present as cultured patrons of arts and scholarship. Public face: elegant merchants, generous philanthropists. Behind veil: ruthless negotiators, protective of trade secrets, view aetheric resources as birthright.",
@@ -211,7 +216,16 @@
         "tags": [
           "political"
         ],
-        "relationships": []
+        "relationships": [
+          {
+            "target": "Location:Silverpeak Mountains",
+            "type": "controls"
+          },
+          {
+            "target": "Location:Aethelburg",
+            "type": "controls"
+          }
+        ]
       },
       "l2": {
         "description": "Ruthless. Efficient. Order. Public face: ironclad industry. Promises prosperity, stability.",
@@ -254,6 +268,39 @@
           {
             "target": "Event:Echo Vault Sundering",
             "type": "guards"
+          },
+          {
+            "target": "Faction:The Gilded Conclave",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Veil of Ash",
+            "type": "member_of"
+          },
+          {
+            "target": "Race:Aetherkin",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Order of the Echo",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Lumeris",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Last Ember Ruin",
+            "type": "located_at"
+          },
+          {
+            "target": "Faction:The Unwritten",
+            "type": "member_of"
+          },
+          {
+            "target": "Character:Lyra Quill",
+            "type": "knows",
+            "strength": -1
           }
         ]
       },
@@ -272,7 +319,7 @@
           "Order of the Echo",
           "Lumeris"
         ],
-        "current_location": "intervene",
+        "current_location": "Last Ember Ruin",
         "moral_alignment": "lawful neutral"
       },
       "l3": {
@@ -287,7 +334,7 @@
     },
     "group_id": "characters",
     "created_at": 1778350893.5315247,
-    "updated_at": 1778604304.000943
+    "updated_at": 1779254634.9173841
   },
   {
     "uid": "Character:Thorik Gravelbrow",
@@ -306,6 +353,26 @@
         "relationships": [
           {
             "target": "Race:Stonebound",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:The Gilded Conclave",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Iron Cartel",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Cinder Spire",
+            "type": "located_at"
+          },
+          {
+            "target": "Faction:Ironclad Guild",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Stone Oath",
             "type": "member_of"
           }
         ]
@@ -360,6 +427,14 @@
           {
             "target": "Race:Sylphari",
             "type": "member_of"
+          },
+          {
+            "target": "Location:Whispering Forest",
+            "type": "located_at"
+          },
+          {
+            "target": "Faction:Emerald Circle",
+            "type": "member_of"
           }
         ]
       },
@@ -413,6 +488,22 @@
           {
             "target": "Faction:Veil of Ash",
             "type": "spies_on"
+          },
+          {
+            "target": "Faction:Whispering Shadows",
+            "type": "member_of"
+          },
+          {
+            "target": "Race:Noctar",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Aethelburg",
+            "type": "located_at"
+          },
+          {
+            "target": "Faction:Driftkin Concord",
+            "type": "member_of"
           }
         ]
       },
@@ -461,7 +552,40 @@
           "Aetherkin",
           "Archivist Cartographer"
         ],
-        "relationships": []
+        "relationships": [
+          {
+            "target": "Faction:The Gilded Conclave",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Veil of Ash",
+            "type": "member_of"
+          },
+          {
+            "target": "Race:Aetherkin",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Order of the Echo",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Lumeris",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Last Ember Ruin",
+            "type": "located_at"
+          },
+          {
+            "target": "Faction:The Unwritten",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Driftkin Concord",
+            "type": "member_of"
+          }
+        ]
       },
       "l2": {
         "description": "Tall Aetherkin. Blue skin. Always adjusting goggles. Fidgets.",
@@ -478,7 +602,7 @@
           "Order of the Echo",
           "Lumeris"
         ],
-        "current_location": "Aethelburg",
+        "current_location": "Last Ember Ruin",
         "moral_alignment": "lawful neutral"
       },
       "l3": {
@@ -493,7 +617,7 @@
     },
     "group_id": "characters",
     "created_at": 1778350893.533459,
-    "updated_at": 1778486108.4774032
+    "updated_at": 1779254634.9018538
   },
   {
     "uid": "Character:Brakus Ironjaw",
@@ -512,7 +636,23 @@
         "relationships": [
           {
             "target": "Faction:Iron Cartel",
-            "type": "leader_of"
+            "type": "member_of"
+          },
+          {
+            "target": "Race:Stonebound",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Silverpeak Mountains",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Ironclad Guild",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Driftkin Concord",
+            "type": "member_of"
           }
         ]
       },
@@ -531,7 +671,7 @@
           "Stonebound",
           "Silverpeak Mountains"
         ],
-        "current_location": "Silverpeak Mountains",
+        "current_location": "trade route near Driftkin",
         "moral_alignment": "lawful neutral"
       },
       "l3": {
@@ -546,7 +686,7 @@
     },
     "group_id": "characters",
     "created_at": 1778350893.5339715,
-    "updated_at": 1778352197.670868
+    "updated_at": 1779450128.051545
   },
   {
     "uid": "Location:Lumeris",
@@ -853,6 +993,10 @@
           {
             "target": "Race:Stonebound",
             "type": "sabotages"
+          },
+          {
+            "target": "Location:Lumeris",
+            "type": "located_at"
           }
         ]
       },
@@ -883,7 +1027,12 @@
         "group": "events",
         "summary": "Gilded Conclave seizes city governance from old duke; court protests become street fire",
         "tags": [],
-        "relationships": []
+        "relationships": [
+          {
+            "target": "Location:Lumeris",
+            "type": "located_at"
+          }
+        ]
       },
       "l2": {
         "detailed_narrative": "Gilded Conclave storms duke's hall at midnight. Duke's guards defect, join Conclave ranks. Protests erupt in streets; torches fly, buildings burn. Old governance falls within hours.",
@@ -912,7 +1061,12 @@
         "group": "events",
         "summary": "Noctar dream-smiths weave visions; aether storms wash over coastlines",
         "tags": [],
-        "relationships": []
+        "relationships": [
+          {
+            "target": "Location:Sea of Glass",
+            "type": "located_at"
+          }
+        ]
       },
       "l2": {
         "detailed_narrative": "Noctar dream-smiths weave coercive visions into waking world. Aether storms erupt along coastlines, eroding reality. Storm-touched see nightmares manifest.",
@@ -1125,7 +1279,16 @@
         "group": "races",
         "summary": "Nature connection. Empathy.",
         "tags": [],
-        "relationships": []
+        "relationships": [
+          {
+            "target": "Location:Whispering Forest",
+            "type": "controls"
+          },
+          {
+            "target": "Location:Eldrin Forest",
+            "type": "controls"
+          }
+        ]
       },
       "l2": {},
       "l3": {}
@@ -1151,6 +1314,10 @@
           {
             "target": "WorldRule:Celestial Mandate",
             "type": "protects"
+          },
+          {
+            "target": "Location:Void Rift",
+            "type": "controls"
           }
         ]
       },
@@ -1193,6 +1360,10 @@
         "relationships": [
           {
             "target": "Location:Silverpeak Mountains",
+            "type": "controls"
+          },
+          {
+            "target": "Location:Cinder Spire",
             "type": "controls"
           }
         ]
@@ -1318,7 +1489,23 @@
         "relationships": [
           {
             "target": "Race:Dwarves",
-            "type": "leader_of"
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Iron Cartel",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Emerald Circle",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Ironclad Guild",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Silverpeak Mountains",
+            "type": "located_at"
           }
         ]
       },
@@ -1371,7 +1558,31 @@
         "relationships": [
           {
             "target": "Faction:Order of the Celestial Gate",
-            "type": "leader_of"
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Veil of Ash",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Order of the Echo",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Whispering Shadows",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Emerald Circle",
+            "type": "member_of"
+          },
+          {
+            "target": "Race:Elves",
+            "type": "member_of"
+          },
+          {
+            "target": "Character:Lyra Quill",
+            "type": "located_at"
           }
         ]
       },
@@ -1424,6 +1635,30 @@
           {
             "target": "Faction:Ironclad Guild",
             "type": "works_for"
+          },
+          {
+            "target": "Faction:Order of the Echo",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Order of the Celestial Gate",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Whispering Shadows",
+            "type": "member_of"
+          },
+          {
+            "target": "Race:Humans",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Aethelburg",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Last Ember Ruin",
+            "type": "located_at"
           }
         ]
       },
@@ -1441,7 +1676,7 @@
           "Humans",
           "Aethelburg"
         ],
-        "current_location": "Aethelburg",
+        "current_location": "Last Ember Ruin approach",
         "moral_alignment": "chaotic neutral"
       },
       "l3": {
@@ -1456,7 +1691,7 @@
     },
     "group_id": "characters",
     "created_at": 1778352061.9509668,
-    "updated_at": 1778834024.0462878
+    "updated_at": 1779254712.520343
   },
   {
     "uid": "Character:Elara Meadowlight",
@@ -1475,7 +1710,15 @@
         "relationships": [
           {
             "target": "Faction:Emerald Circle",
-            "type": "leader_of"
+            "type": "member_of"
+          },
+          {
+            "target": "Race:Sylvans",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Eldrin Forest",
+            "type": "located_at"
           }
         ]
       },
@@ -1525,7 +1768,24 @@
           "Humans",
           "Merchant"
         ],
-        "relationships": []
+        "relationships": [
+          {
+            "target": "Faction:Ironclad Guild",
+            "type": "member_of"
+          },
+          {
+            "target": "Race:Humans",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Aethelburg",
+            "type": "located_at"
+          },
+          {
+            "target": "Location:Silverpeak Mountains",
+            "type": "member_of"
+          }
+        ]
       },
       "l2": {
         "description": "Thin, sharp-featured human with close-cropped dark hair and calculating grey eyes. Wears practical traveling clothes with subtle guild insignia. Always counting coins, tapping fingers during negotiations, maintains eye contact too long.",
@@ -1577,7 +1837,27 @@
         "relationships": [
           {
             "target": "Faction:Whispering Shadows",
-            "type": "leader_of"
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Order of the Echo",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Order of the Celestial Gate",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Veil of Ash",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Aethelburg",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Last Ember Ruin",
+            "type": "located_at"
           }
         ]
       },
@@ -1595,7 +1875,7 @@
           "Veil of Ash",
           "Aethelburg"
         ],
-        "current_location": "Aethelburg",
+        "current_location": "Last Ember Ruin",
         "moral_alignment": "chaotic evil"
       },
       "l3": {
@@ -1610,7 +1890,7 @@
     },
     "group_id": "characters",
     "created_at": 1778352061.952192,
-    "updated_at": 1778486687.4146214
+    "updated_at": 1779254634.9491336
   },
   {
     "uid": "Location:Silverpeak Mountains",
@@ -1888,6 +2168,10 @@
           {
             "target": "Faction:Order of the Celestial Gate",
             "type": "sabotages"
+          },
+          {
+            "target": "Location:Aethelburg",
+            "type": "located_at"
           }
         ]
       },
@@ -1922,6 +2206,10 @@
           {
             "target": "Faction:Ironclad Guild",
             "type": "at_war_with"
+          },
+          {
+            "target": "Location:Silverpeak Mountains",
+            "type": "located_at"
           }
         ]
       },
@@ -1952,7 +2240,12 @@
         "group": "events",
         "summary": "Voidspawn attack Aethelburg.",
         "tags": [],
-        "relationships": []
+        "relationships": [
+          {
+            "target": "Location:Aethelburg",
+            "type": "located_at"
+          }
+        ]
       },
       "l2": {
         "detailed_narrative": "Rift tears sky over Aethelburg. Voidspawn pour through, shattering streets with shadow. Aetherkin mages and Stonebound warriors rally, push back tide. City walls hold, but many die.",
@@ -1981,7 +2274,12 @@
         "group": "events",
         "summary": "Sylvans form protect forest.",
         "tags": [],
-        "relationships": []
+        "relationships": [
+          {
+            "target": "Location:Whispering Forest",
+            "type": "located_at"
+          }
+        ]
       },
       "l2": {
         "detailed_narrative": "Sylvan form Emerald Circle. Protect Whispering Forest. Circle use forest magic. Forest safe.",
@@ -2234,6 +2532,14 @@
           {
             "target": "Character:Null",
             "type": "fears"
+          },
+          {
+            "target": "Location:Threnod",
+            "type": "controls"
+          },
+          {
+            "target": "Location:Oth-Mora",
+            "type": "controls"
           }
         ]
       },
@@ -2407,6 +2713,22 @@
           {
             "target": "Item:Stillborn Hourglass",
             "type": "desires"
+          },
+          {
+            "target": "Faction:Stone Oath",
+            "type": "member_of"
+          },
+          {
+            "target": "Race:Ashborn",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Cinder Tribunal",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Cinder Spire",
+            "type": "located_at"
           }
         ]
       },
@@ -2458,7 +2780,15 @@
         "relationships": [
           {
             "target": "Faction:Driftkin Concord",
-            "type": "spies_on"
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Cinder Tribunal",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Cinder Spire",
+            "type": "located_at"
           }
         ]
       },
@@ -2510,7 +2840,23 @@
         "relationships": [
           {
             "target": "Race:Veinrock",
-            "type": "leader_of"
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Stone Oath",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Cinder Tribunal",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:The Unwritten",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Oth-Mora",
+            "type": "located_at"
           }
         ]
       },
@@ -2564,7 +2910,19 @@
         "relationships": [
           {
             "target": "Faction:Cinder Tribunal",
-            "type": "sabotages"
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:The Unwritten",
+            "type": "member_of"
+          },
+          {
+            "target": "Race:Hollow",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Last Ember Ruin",
+            "type": "located_at"
           }
         ]
       },
@@ -2617,6 +2975,18 @@
           {
             "target": "Character:Kael Vorn",
             "type": "seeks"
+          },
+          {
+            "target": "Faction:Cinder Tribunal",
+            "type": "member_of"
+          },
+          {
+            "target": "Race:Ashborn",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Cinder Spire",
+            "type": "located_at"
           }
         ]
       },
@@ -2669,6 +3039,18 @@
           {
             "target": "Location:Oth-Mora",
             "type": "located_in"
+          },
+          {
+            "target": "Race:Veinrock",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:The Unwritten",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:The Sour Deeps",
+            "type": "located_at"
           }
         ]
       },
@@ -2720,6 +3102,10 @@
           {
             "target": "Race:Ashborn",
             "type": "contains"
+          },
+          {
+            "target": "Faction:Cinder Tribunal",
+            "type": "member_of"
           }
         ]
       },
@@ -2976,7 +3362,12 @@
         "group": "events",
         "summary": "Last Ember Citadel mages burned collective centuries attempting immortality ritual, ignited ashfall",
         "tags": [],
-        "relationships": []
+        "relationships": [
+          {
+            "target": "Location:Last Ember Ruin",
+            "type": "located_at"
+          }
+        ]
       },
       "l2": {
         "detailed_narrative": "Last Ember Citadel mages pooled centuries into immortality ritual. Ritual tore aether, collapsed citadel, ignited continent-spanning ashfall.",
@@ -3005,7 +3396,12 @@
         "group": "events",
         "summary": "Veinrock and Driftkin agree sea borders measured in stone dropped, not leagues sailed",
         "tags": [],
-        "relationships": []
+        "relationships": [
+          {
+            "target": "Location:Oth-Mora",
+            "type": "located_at"
+          }
+        ]
       },
       "l2": {
         "detailed_narrative": "Veinrock masons and Driftkin tide-sages met on basalt jetty at Oth-Mora. They cast marked stones into surf until ripples touched opposing cliffs; drop-count became border. Agreement etched on lead tablets, chained to seabed. Both fleets withdrew same tide.",
@@ -3038,6 +3434,10 @@
           {
             "target": "Character:Null",
             "type": "created_by"
+          },
+          {
+            "target": "Location:Last Ember Ruin",
+            "type": "located_at"
           }
         ]
       },
@@ -3068,7 +3468,12 @@
         "group": "events",
         "summary": "Chronomancer creates hourglass, dies, artifact seized by Tribunal",
         "tags": [],
-        "relationships": []
+        "relationships": [
+          {
+            "target": "Location:Last Ember Ruin",
+            "type": "located_at"
+          }
+        ]
       },
       "l2": {
         "detailed_narrative": "Chronomancer Null crafts Stillborn Hourglass to trap time. Artifact rejects creator, drains Null's soul. Verra Cinder seizes hourglass for Cinder Tribunal. Event named The Stillbirth for creation that killed parent.",
@@ -3234,5 +3639,624 @@
     "group_id": "factions",
     "created_at": 1778833746.224768,
     "updated_at": 1778833746.2247694
+  },
+  {
+    "uid": "Character:NPC_default_992",
+    "name": "NPC_default_992",
+    "entity_type": "Character",
+    "profile": {
+      "l1": {
+        "name": "NPC_default_992",
+        "type": "Character",
+        "group": "default",
+        "summary": "Newly created NPC",
+        "tags": [],
+        "relationships": []
+      },
+      "l2": {},
+      "l3": {}
+    },
+    "group_id": "characters",
+    "created_at": 1778935789.2780826,
+    "updated_at": 1778935789.2780852
+  },
+  {
+    "uid": "Character:NPC_default_224",
+    "name": "NPC_default_224",
+    "entity_type": "Character",
+    "profile": {
+      "l1": {
+        "name": "NPC_default_224",
+        "type": "Character",
+        "group": "default",
+        "summary": "Newly created NPC",
+        "tags": [],
+        "relationships": [
+          {
+            "target": "Character:Kael Vorn",
+            "type": "member_of"
+          },
+          {
+            "target": "Character:Grandcarver Oth",
+            "type": "member_of"
+          }
+        ]
+      },
+      "l2": {
+        "description": "Tall, ash-pale skin, hair like matted grave-moss. Eyes: two different colors, left amber, right milky blind. Wears layers of burnt linen, smells of ozone. Fingers constantly move, counting invisible things.",
+        "personality": "Obsessive about debts and balances. Fears silence, rooms without echoes. Desires to witness a true creation—something from nothing.",
+        "backstory_short": "Born during Ashfall Persistence respawn, parents consumed by ash-sickness. Raised by Veinrock refugees who taught Stone Truth through pain. Exiled for asking Hollow Exclusion questions aloud.",
+        "abilities": [
+          "Ash-Sight: reads past week's events in current ash-fall patterns, obeys Ashfall Persistence",
+          "Soul-Ledger: senses approximate soul-mass of beings, obeys Conservation of Soul",
+          "Echo-Mark: voice repeats from surfaces touched, useful for deception against non-Veinrock"
+        ],
+        "goal": "Reach Last Ember Ruin, witness ash source with own eyes.",
+        "affiliations": [
+          "Kael Vorn",
+          "Grandcarver Oth"
+        ],
+        "current_location": null,
+        "moral_alignment": "true neutral"
+      },
+      "l3": {
+        "secret_background": "Ashfall Persistence birth not accident. Ritual. Grandcarver Oth involved.",
+        "true_motivation": "Not witness creation. Control it. End Ashfall Persistence.",
+        "hidden_relation": "Kael Vorn not ally. Vorn soul debt. Enslaved. Must free.",
+        "curse_or_blessing": "Echo-Mark not skill. Entity. Feeds on lies. Grows stronger.",
+        "fear": "Eternal silence. Non-existence. Void before Ash.",
+        "regret": "Failed save parents. Watched ash consume. Did nothing.",
+        "unrevealed_power": "Veinrock Stone Truth. Can unmake constructs. Soul cost high."
+      }
+    },
+    "group_id": "characters",
+    "created_at": 1778935863.6085372,
+    "updated_at": 1778935874.5357704
+  },
+  {
+    "uid": "Character:NPC_default_186",
+    "name": "NPC_default_186",
+    "entity_type": "Character",
+    "profile": {
+      "l1": {
+        "name": "NPC_default_186",
+        "type": "Character",
+        "group": "default",
+        "summary": "Newly created NPC",
+        "tags": [],
+        "relationships": [
+          {
+            "target": "Race:Veinrock",
+            "type": "member_of"
+          },
+          {
+            "target": "Character:Null",
+            "type": "located_at"
+          }
+        ]
+      },
+      "l2": {
+        "description": " gaunt figure wrapped in ash-grey robes that never fully settle, constantly shedding fine black dust. Missing left eye socket (healed over with smooth scar tissue). Speaks rarely, gestures with precise, deliberate movements. Veinrock skin has visible crystalline veins pulsing faintly beneath surface.",
+        "personality": "Obsessive about truth, cannot tolerate deception even in others. Fears losing the ability to speak (stone curse). Desires to find the Last Ember Ruin before ash respawns again. Cold but not cruel.",
+        "backstory_short": "Former Veinrock truth-speaker exiled for refusing to lie to Grandcarver Oth. Wandered the ash-fields for years, now bound to tracking the Last Ember Ruin's weekly cycle.",
+        "abilities": [
+          "Stone Truth compulsion (detect lies, pain if speaking false)",
+          "Soul-sight (see soul-stuff movement per Conservation rule)",
+          "Ash-walking (navigate respawning ash without losing direction)"
+        ],
+        "goal": "Reach Last Ember Ruin before next ash respawn to witness what creates the weekly cycle",
+        "affiliations": [
+          "Veinrock (former)",
+          "Kael Vorn (owed debt for saving from ash-storm)",
+          "Last Ember Ruin (target of obsession)"
+        ],
+        "current_location": "null",
+        "moral_alignment": "lawful neutral"
+      },
+      "l3": {
+        "secret_background": "Lied to Grandcarver Oth. Mine collapse killed dozens. Exiled for cover-up.",
+        "true_motivation": "Reverse curse. Last Ember Ruin holds cure for stone petrification.",
+        "hidden_relation": "Last Ember Ruin tomb of lover. He triggered ash cycle trying to resurrect her.",
+        "curse_or_blessing": "Stone truth compulsion accelerates petrification each lie spoken nearby.",
+        "fear": "Becoming statue. Trapped in eternal silence.",
+        "regret": "Told truth that exposed Veinrock weakness. Ash-storm consumed village.",
+        "unrevealed_power": "Absorb ash to regrow missing eye. See through stone."
+      }
+    },
+    "group_id": "characters",
+    "created_at": 1778935984.7488651,
+    "updated_at": 1778936024.5223696
+  },
+  {
+    "uid": "Character:Nyssara Keldrel",
+    "name": "Nyssara Keldrel",
+    "entity_type": "Character",
+    "profile": {
+      "l1": {
+        "name": "Nyssara Keldrel",
+        "type": "Character",
+        "group": "characters",
+        "summary": "Tall Driftkin, pale iridescent skin, silver drift-fire in eyes, calm voice, curious mind.",
+        "tags": [
+          "Driftkin"
+        ],
+        "relationships": [
+          {
+            "target": "Race:Driftkin",
+            "type": "member_of"
+          }
+        ]
+      },
+      "l2": {
+        "description": "Tall Driftkin, pale iridescent skin, silver drift-fire in eyes, calm voice, measured movements, curious gaze.",
+        "personality": "calm, inquisitive, empathetic; fears betrayal and loss of control over drift-fire; desires knowledge, ethical magic, protection of kin",
+        "backstory_short": "Born to Parents wandering cartographers of marginal means; guardianship uncertain. in Lumenreach Shallows. Born during silver storm; driftline spirits whispered prophecy.",
+        "abilities": [
+          "Soul-tide touch: move or consume soul-stuff in contact; cannot create/destroy",
+          "Drift-fire gaze: reveals magical signatures and hidden constructs within short range",
+          "Calm resonance: aura that reduces fear in nearby beings during tense moments"
+        ],
+        "goal": "Investigate drift-fire disturbance near Last Ember Ruin",
+        "affiliations": [
+          "Driftkin"
+        ],
+        "current_location": "Lumenreach Shallows",
+        "moral_alignment": "Lawful Good"
+      },
+      "l3": {
+        "secret_background": "Spirits swapped infant Nyssara with stillborn noble child; true bloodline sits on Lumenreach Council.",
+        "true_motivation": "Find birth-sibling whose soul she accidentally consumed during first tide-touch.",
+        "hidden_relation": "Bound to Last Ember’s sleeping Forge-Heart; each feeds other’s fire.",
+        "curse_or_blessing": "Drift-fire will ignite her bones if she ever lies; truth spoken aloud cools the flame.",
+        "fear": "Voice that first whispered prophecy will return commanding her to burn the Shallows.",
+        "regret": "Failed to calm riot; seventeen driftkin children ash.",
+        "unrevealed_power": "Can reverse own time six heartbeats, undoing single action at cost of another’s memory of her."
+      }
+    },
+    "group_id": "characters",
+    "created_at": 1778936819.397731,
+    "updated_at": 1778936877.5478709
+  },
+  {
+    "uid": "Character:TestChar",
+    "name": "TestChar",
+    "entity_type": "Character",
+    "profile": {
+      "l1": {
+        "name": "TestChar",
+        "type": "Character",
+        "group": "characters",
+        "summary": "Stout, pale-skinned dwarf with visible mineral veins glowing faintly beneath cracked skin, quiet and observant.",
+        "tags": [
+          "Veinrock"
+        ],
+        "relationships": [
+          {
+            "target": "Race:Veinrock",
+            "type": "member_of"
+          }
+        ]
+      },
+      "l2": {
+        "description": "Cracked skin glows faintly. Moves slow. Observant gaze.",
+        "personality": "Quiet, cautious. Fears collapse. Desires stability.",
+        "backstory_short": "Born to Stone Oath miners, low caste, parents dead in collapse month prior. in Crackhold Warrens. Born during tremor; phosphorescent gas filled chamber, midwife claimed stone whispered name.",
+        "abilities": [
+          "Stone Sense: Feels veinrock vibrations.",
+          "Truthspeaker: Cannot lie.",
+          "Ember Resistance: Slight ash protection."
+        ],
+        "goal": "Find safe place.",
+        "affiliations": [
+          "Veinrock"
+        ],
+        "current_location": "Crackhold Warrens",
+        "moral_alignment": "lawful neutral"
+      },
+      "l3": {
+        "secret_background": "Stone whispered true name at birth - not TestChar. True name sealed in veinrock crystal beneath heart. Name stolen by Veinrock covenant to bind miner bloodlines.",
+        "true_motivation": "Find the sealed name-crystal. Break binding. Return home impossible until covenant broken.",
+        "hidden_relation": "Midwife: actually Veinrock covenant agent. Still watches. Reports to Stone Oath elders.",
+        "curse_or_blessing": "Truthspeaker not gift. Curse. Veinrock covenant branded truth-forced loyalty at birth. Cannot lie, but also cannot refuse covenant's future commands.",
+        "fear": "Not collapse. Speaking true name aloud triggers covenant enforcement. Death or worse for all bloodline.",
+        "regret": "Month before parents died - found covenant marker on their tools. Said nothing. Could have warned them. Could have saved them.",
+        "unrevealed_power": "Stone Sense reads past vibrations embedded in rock. Can sense every death in veinrock. Every miner who died. Every secret buried."
+      }
+    },
+    "group_id": "characters",
+    "created_at": 1778936890.8401062,
+    "updated_at": 1778936902.967794
+  },
+  {
+    "uid": "Character:Klein Belmont",
+    "name": "Klein Belmont",
+    "entity_type": "Character",
+    "profile": {
+      "l1": {
+        "name": "Klein Belmont",
+        "type": "Character",
+        "group": "characters",
+        "summary": "Lean and sharp-featured with charcoal-gray skin and ember-flecked eyes, Klein carries himself with the rigid discipline of a soldier but a restless, questioning mind hidden beneath.",
+        "tags": [
+          "Ashborn"
+        ],
+        "relationships": [
+          {
+            "target": "Race:Ashborn",
+            "type": "member_of"
+          },
+          {
+            "target": "WorldRule:Ashfall Persistence",
+            "type": "located_at"
+          }
+        ]
+      },
+      "l2": {
+        "description": "Charcoal skin ripples like cooling ember, eyes flicker dying-fire orange. Moves silent, shoulders squared, fingers drum against thigh when thinking. Wears ash-stained leather, no insignia. Voice low, questions hang too long.",
+        "personality": "Disciplined shell hides doubt. Craves purpose but fears blind obedience made him monster. Distrusts easy answers. Cannot forget faces of those he followed orders against. Desire: prove choice possible, not only duty.",
+        "backstory_short": "Born to Third son of Lord Aldric Belmont, commander of the eastern border legions, and Lady Seraphine Belmont, a strategist of noble Ashborn blood; House Belmont holds high rank in the eastern kingdom's military hierarchy. in Ashfall Keep, fortress-city on the eastern frontier of Vorath. Born during the Crimson Eclipse, a rare celestial event that deepened the ember-glow in his skin and left him with faint, shifting heat patterns visible on his arms.",
+        "abilities": [
+          "Ash-step: move through thick ash-fall as if water, brief, consumes breath",
+          "Ember sight: see heat-traces of souls recently present, cannot create soul-stuff, only witness residue",
+          "Stillness: hold breath, slow heart, become hollow to god-sight briefly, dangerous"
+        ],
+        "goal": "Find Null, ask what disobedience costs.",
+        "affiliations": [
+          "Ashborn"
+        ],
+        "current_location": "Ashfall Keep, eastern barracks courtyard",
+        "moral_alignment": "lawful neutral"
+      },
+      "l3": {
+        "secret_background": "Witnessed father's betrayal, Ashborn pact with shadow entity, family power secured by dark bargain.",
+        "true_motivation": "Atonement. Undo Ashborn pact. Save others from same path.",
+        "hidden_relation": "Descendant of first Ashborn, blood-bound to Null.",
+        "curse_or_blessing": "Ember Sight shows truth, but burns memory. Each vision fades piece of past.",
+        "fear": "Becoming monster he fights. Losing self to duty.",
+        "regret": "Following orders during Siege of Whisperwood. Innocent blood stains hands.",
+        "unrevealed_power": "Control ember-traces. Weave soul-stuff, limited, dangerous."
+      }
+    },
+    "group_id": "characters",
+    "created_at": 1778937076.991701,
+    "updated_at": 1778937099.2487462
+  },
+  {
+    "uid": "Character:TestBaby",
+    "name": "TestBaby",
+    "entity_type": "Character",
+    "profile": {
+      "l1": {
+        "name": "TestBaby",
+        "type": "Character",
+        "group": "characters",
+        "summary": "Small child. Curious, observant.",
+        "tags": [
+          "Driftkin"
+        ],
+        "relationships": [
+          {
+            "target": "Race:Driftkin",
+            "type": "member_of"
+          }
+        ]
+      },
+      "l2": {
+        "description": "Small soot-dusted child, barely reaches adult waist. Large amber eyes constantly scan surroundings. Flickers like embers when moving - slight shimmer to skin. Wears patched ash-gray cloak. Rarely speaks, prefers to watch.",
+        "personality": "Intense curiosity overrides caution. Observes everything, remembers details adults miss. Fears being dismissed as 'just a child'. Desires to prove worth by solving sky-ash mystery. Trusts few, learns fast.",
+        "backstory_short": "Born to Born sailors. Low social standing. in Seabreeze Enclave. Calm seas.",
+        "abilities": [
+          "Ashglance: sense recent ash-fall paths, trace movement through residue",
+          "Driftwalk: move silently through loose ash without disturbing it",
+          "Child's Shroud: adults automatically underestimate, easier to overhear/seek"
+        ],
+        "goal": "Discover why ash respawns weekly from Last Ember Ruin.",
+        "affiliations": [
+          "Driftkin"
+        ],
+        "current_location": "Seabreeze Enclave docks",
+        "moral_alignment": "chaotic good"
+      },
+      "l3": {
+        "secret_background": "Born from ash-storm survivor who died birthing her, not sailor.",
+        "true_motivation": "Find mother’s body in Last Ember Ruin, prove she exists.",
+        "hidden_relation": "Unknowing descendant of Ash-Keeper, first who sealed ruin.",
+        "curse_or_blessing": "Ashglance shows ash paths but slowly petrifies lungs.",
+        "fear": "Being forgotten, erased like ash in wind.",
+        "regret": "Letting stranger take mother’s only keepsake for promise of answers.",
+        "unrevealed_power": "Ember-sense: feel heat trails of living things through ash."
+      }
+    },
+    "group_id": "characters",
+    "created_at": 1778937723.2642434,
+    "updated_at": 1778937738.5454016
+  },
+  {
+    "uid": "Character:MyNewChar",
+    "name": "MyNewChar",
+    "entity_type": "Character",
+    "profile": {
+      "l1": {
+        "name": "MyNewChar",
+        "type": "Character",
+        "group": "characters",
+        "summary": "Slim Driftkin with sea-green scales, wind-tousled hair, keen storm-blue eyes; curious, stubbornly loyal.",
+        "tags": [
+          "Driftkin"
+        ],
+        "relationships": [
+          {
+            "target": "Race:Driftkin",
+            "type": "member_of"
+          }
+        ]
+      },
+      "l2": {
+        "description": "Slim Driftkin; sea-green scales; wind-tousled hair; storm-blue eyes; lean, athletic build; moves with wind-driven, economical steps; speaks in short, precise phrases; sea-glass charm hums when soul-stuff moves.",
+        "personality": "Curious, stubbornly loyal; helps friends first, questions later; fears losing control of soul-ties; desires map hidden paths and protect companions.",
+        "backstory_short": "Born to parents seamstress and courier; modest, no royal ties in Galecrest Harbor. birth during sudden storm; drift-echo tugged cradle toward safe harbor",
+        "abilities": [
+          "Soul-thread awareness: sense flow of soul-stuff; move or consume soul-stuff between beings",
+          "Storm-sense: read wind and weather; navigate storms with steady gait",
+          "Sea-green camouflage: blend with marine environments; stealth boost"
+        ],
+        "goal": "Find Last Ember Ruin fragment before weekly respawn; secure safe passage for crew",
+        "affiliations": [
+          "Driftkin"
+        ],
+        "current_location": "Galecrest Harbor",
+        "moral_alignment": "Chaotic Good"
+      },
+      "l3": {
+        "secret_background": "Cradle swap: storm carried in egg of extinct Sky-Scaled line; real parents unknown, courier mother found child on cliff",
+        "true_motivation": "Egg calls to Sky-Scaled roost in Last Ember Ruin; hatch it, awaken lineage, become storm-winged",
+        "hidden_relation": "Twin brother lives as storm inside Galecrest cyclone; each soul-thread pull feeds him, lengthens his life",
+        "curse_or_blessing": "Each use of soul-thread peels one scale; when last scale falls, body becomes wind, mind joins brother",
+        "fear": "Final scale drops before map complete; existence ends as disembodied gust",
+        "regret": "Once pulled entire soul from childhood friend to save boat; friend now hollow, tending docks",
+        "unrevealed_power": "Can re-attach peeled scales to others, graft Sky-Scaled traits, create new storm-kin"
+      }
+    },
+    "group_id": "characters",
+    "created_at": 1778937776.021052,
+    "updated_at": 1778937829.857659
+  },
+  {
+    "uid": "Character:NPC_The Unwritten_909",
+    "name": "NPC_The Unwritten_909",
+    "entity_type": "Character",
+    "profile": {
+      "l1": {
+        "name": "NPC_The Unwritten_909",
+        "type": "Character",
+        "group": "The Unwritten",
+        "summary": "Newly created NPC",
+        "tags": [],
+        "relationships": [
+          {
+            "target": "Character:Null",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Last Ember Ruin",
+            "type": "located_at"
+          }
+        ]
+      },
+      "l2": {
+        "description": "Pale skin. Wears simple gray cloth. Quiet, observant.",
+        "personality": "Curious. Afraid of Null. Wants knowledge.",
+        "backstory_short": "Appeared recently near Last Ember Ruin. No memory before then.",
+        "abilities": [
+          "Sense Soul: Detect soul presence.",
+          "Ash Resistance: Less ash harm.",
+          "Veinrock Empathy: Feel veinrock pain."
+        ],
+        "goal": "Learn origin.",
+        "affiliations": [
+          "Null",
+          "Last Ember Ruin"
+        ],
+        "current_location": "Last Ember Ruin",
+        "moral_alignment": "neutral"
+      },
+      "l3": {}
+    },
+    "group_id": "characters",
+    "created_at": 1779087342.3748295,
+    "updated_at": 1779087346.6540265
+  },
+  {
+    "uid": "Character:NPC_Driftkin Concord_884",
+    "name": "NPC_Driftkin Concord_884",
+    "entity_type": "Character",
+    "profile": {
+      "l1": {
+        "name": "NPC_Driftkin Concord_884",
+        "type": "Character",
+        "group": "Driftkin Concord",
+        "summary": "Newly created NPC",
+        "tags": [],
+        "relationships": [
+          {
+            "target": "Faction:Driftkin Concord",
+            "type": "member_of"
+          },
+          {
+            "target": "Race:Veinrock",
+            "type": "member_of"
+          }
+        ]
+      },
+      "l2": {
+        "description": "Ash-grey skin, cracked like old glaze. Moves slow, deliberate, like driftwood current. Eyes: pale amber, track ash-fall patterns. Wears layered ash-cloth, constantly brushes shoulders clean—gesture, not effort.",
+        "personality": "Patient. Calculates cost before act. Fears silence—Last Ember Ruin quiet too long means failure. Desires stable route through Ashfall, permanent.",
+        "backstory_short": "Born during week-long ash-storm, parents marked by Last Ember Ruin exposure. Traded soul-stuff fragments to Veinrock scholars for mapping secrets. Survived three Hollow raids by stillness.",
+        "abilities": [
+          "Ash-Reading: trace ash density, predict Last Ember Ruin respawn timing",
+          "Soul-Stuff Sensing: detect unclaimed soul fragments within ash clouds, obey Conservation",
+          "Veinrock Pact: speak truth only, gain Stone Truth protection during bargains"
+        ],
+        "goal": "Chart ash-current safe passage before next weekly respawn.",
+        "affiliations": [
+          "Driftkin Concord",
+          "Veinrock scholars"
+        ],
+        "current_location": "Harbor Docks",
+        "moral_alignment": "lawful neutral"
+      },
+      "l3": {
+        "secret_background": "Parents not marked. Parents Veinrock scholars, experimented. Concord hide truth.",
+        "true_motivation": "Find cure. Ash-exposure sickness slow kill.",
+        "hidden_relation": "Bound. Veinrock scholar control. Soul-stuff debt.",
+        "curse_or_blessing": "Ash-Reading: Sees future ashfall. Cannot unsee.",
+        "fear": "Soul-death. Fragments scatter. No return.",
+        "regret": "Veinrock bargain. Truth cost freedom.",
+        "unrevealed_power": "Control ash density. Minor, needs focus."
+      }
+    },
+    "group_id": "characters",
+    "created_at": 1779254464.0344565,
+    "updated_at": 1779254702.806164
+  },
+  {
+    "uid": "Item:Artifact_165",
+    "name": "Artifact_165",
+    "entity_type": "Item",
+    "profile": {
+      "l1": {
+        "name": "Artifact_165",
+        "type": "Item",
+        "group": "items",
+        "summary": "uncommon artifact",
+        "tags": [
+          "artifact",
+          "uncommon"
+        ],
+        "relationships": []
+      },
+      "l2": {
+        "physical_description": "Palm-sized obsidian disc, smooth edges, surface etched with spiral that glows faintly when soul-stuff near. Fine ash film coats disc, never wipes clean.",
+        "primary_power": "Absorb ambient soul-stuff from nearby dead within 10 feet, store up to one hour of soul-energy. Release stored energy as brief heat burst or light flash. Cannot transfer soul-stuff between vessels.",
+        "creation_myth": "Forged by Ashborn exile who caught falling ember from Last Ember Ruin respawn. Quenched in Veinrock blood. Only three made before exile died.",
+        "required_affinity": "Touch attunement. User must hold disc during death to establish bond. No magical skill needed.",
+        "rarity": "uncommon"
+      },
+      "l3": {}
+    },
+    "group_id": "items",
+    "created_at": 1779254726.525702,
+    "updated_at": 1779254740.297691
+  },
+  {
+    "uid": "Character:NPC_Ashborn_864",
+    "name": "NPC_Ashborn_864",
+    "entity_type": "Character",
+    "profile": {
+      "l1": {
+        "name": "NPC_Ashborn_864",
+        "type": "Character",
+        "group": "Ashborn",
+        "summary": "Newly created NPC",
+        "tags": [],
+        "relationships": [
+          {
+            "target": "Race:Ashborn",
+            "type": "member_of"
+          },
+          {
+            "target": "Race:Veinrock",
+            "type": "located_at"
+          }
+        ]
+      },
+      "l2": {
+        "description": "Gaunt, ashen-skinned humanoid, coal-black eyes, hair of fine grey ash-dust. Movements deliberate, crackling whisper.",
+        "personality": "Fatalistic, curious, solitary. Fears oblivion, desires to feel warmth before final ember dies. Hollow, cannot be seen by gods.",
+        "backstory_short": "Born from last cinders of Ashborn pyre during Ashfall week. Forged by Veinrock's deep tremor. Wanders seeking answer why it persists.",
+        "abilities": [
+          "Ash Step: Dissipate into falling ash, reappear nearby (consumes soul-stuff).",
+          "Veinrock Affinity: Intuit truth from non-magical stone.",
+          "Ember Sight: See residual soul-heat in objects/places."
+        ],
+        "goal": "Locate Last Ember Ruin before next weekly Ashfall Persistence, investigate its origin.",
+        "affiliations": [
+          "Ashborn",
+          "Driftkin Concord_884"
+        ],
+        "current_location": "Veinrock Scar",
+        "moral_alignment": "true neutral"
+      },
+      "l3": {
+        "secret_background": "Not born of Ashfall but remnant of failed god-trap experiment by Veinrock cult.",
+        "true_motivation": "Find Last Ember Ruin to reforge self into vessel for a fragment of dying fire-god.",
+        "hidden_relation": "Shared origin with Driftkin Concord_884 leader — both experiments, one succeeded.",
+        "curse_or_blessing": "Soul-stuff slowly crystallizes into obsidian; full conversion = permanent petrification.",
+        "fear": "Being fully consumed by Ash Step until no ember remains.",
+        "regret": "Betrayed fellow experiment to save self; that one became Concord_884 leader.",
+        "unrevealed_power": "Can siphon residual soul-heat from others via Ember Sight, hastening their decay."
+      }
+    },
+    "group_id": "characters",
+    "created_at": 1779433669.630127,
+    "updated_at": 1779433699.814944
+  },
+  {
+    "uid": "Character:NPC_Stone Oath_203",
+    "name": "NPC_Stone Oath_203",
+    "entity_type": "Character",
+    "profile": {
+      "l1": {
+        "name": "NPC_Stone Oath_203",
+        "type": "Character",
+        "group": "Stone Oath",
+        "summary": "Newly created NPC",
+        "tags": [],
+        "relationships": [
+          {
+            "target": "Race:Veinrock",
+            "type": "member_of"
+          },
+          {
+            "target": "Faction:Stone Oath",
+            "type": "member_of"
+          },
+          {
+            "target": "Location:Last Ember Ruin",
+            "type": "located_at"
+          }
+        ]
+      },
+      "l2": {
+        "description": "Gaunt, ash-caked woman in tattered Veinrock robes. Crimson ore grows from left forearm. Moves with stiff, deliberate steps. Speaks in gravel whispers.",
+        "personality": "Fatalistic keeper of Stone Truth. Fears breaking Veinrock oath. Desires to atone for unspoken sin.",
+        "backstory_short": "Once a Veinrock oath-breaker, gouged out her own tongue and replaced it with an obsidian shard. Swore the Stone Oath to avoid soul-consumption. Now wanders recording unspoken debts.",
+        "abilities": [
+          "Soul-Silence: Can consume her own soul-stuff to nullify nearby magic for 10 breaths",
+          "Tongue of Vein: Cannot lie, but can omit truths; obsidian tongue cuts those who force speech",
+          "Ash-Step: Walk through ashfall without leaving tracks or stirring settled ash"
+        ],
+        "goal": "Find a Hollow to entrust her recorded debts before her soul erodes completely.",
+        "affiliations": [
+          "Veinrock",
+          "Stone Oath",
+          "Last Ember Ruin"
+        ],
+        "current_location": "Last Ember Ruin",
+        "moral_alignment": "lawful neutral"
+      },
+      "l3": {
+        "secret_background": "She was Veinrock's High Priestess who forged Oath herself, then broke it to spare a child from sacrifice.",
+        "true_motivation": "Find a Hollow to transfer her soul-debts → avoid dissolution; atone by saving one more child.",
+        "hidden_relation": "The child she spared is now a Hollow she seeks.",
+        "curse_or_blessing": "Crimson ore on arm is Oath's living brand: slowly consumes flesh → erases her from memory.",
+        "fear": "Being forgotten entirely before she can pass on debts.",
+        "regret": "Not destroying Veinrock's Oath-stone when she had the chance.",
+        "unrevealed_power": "Can shatter her obsidian tongue to release a single truth that rewrites local reality."
+      }
+    },
+    "group_id": "characters",
+    "created_at": 1779450149.5142229,
+    "updated_at": 1779450165.1766825
   }
 ]

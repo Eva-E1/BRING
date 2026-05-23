@@ -14,7 +14,7 @@ class SceneGenerator:
         self.builder = builder
         self.G = store.get_active_graph()
 
-    def generate_scene_from_cluster(self, center_uid: str, num_characters: int = 3) -> dict:
+    async def generate_scene_from_cluster(self, center_uid: str, num_characters: int = 3) -> dict:
         """
         Pick a cluster around `center_uid`, extract characters and location,
         and call the world_builder to generate a narrative scene.
@@ -61,16 +61,13 @@ class SceneGenerator:
             f"Known backstories: {backstories}\n"
         )
 
-        # Use the builder's scene generation prompt
-        async def _gen():
-            rules = self._get_rules_text()
-            return await self.builder.builder.gen.generate_scene(
-                self.builder.builder.world_frame["world_name"],
-                rules,
-                context
-            )
-        loop = asyncio.get_event_loop()
-        scene = loop.run_until_complete(_gen())
+        # Use the builder's scene generation prompt - now async
+        rules = self._get_rules_text()
+        scene = await self.builder.builder.gen.generate_scene(
+            self.builder.builder.world_frame["world_name"],
+            rules,
+            context
+        )
         return {
             "scene_text": scene.get("scene_text", ""),
             "entities_mentioned": scene.get("entities_mentioned", []),

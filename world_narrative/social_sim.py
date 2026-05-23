@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, List, Tuple, Optional
 
 import networkx as nx
 
+from world_core.probability import get_profile, OutcomeQuality
+
 if TYPE_CHECKING:
     from .context import NarrativeContext
 
@@ -113,7 +115,66 @@ class SocialSimulator:
         loc_b = b_state.location if b_state else "unknown"
         loc = loc_a if loc_a == loc_b else "unknown"
 
-        # Generate a short interaction via LLM
+        # Use probability system if available
+        prob_engine = getattr(self.ctx, 'prob_engine', None)
+        prob_resolver = getattr(self.ctx, 'prob_resolver', None)
+
+        if prob_engine and prob_resolver and hasattr(self.ctx, 'prob_engine'):
+            # Probability-based social interaction
+            try:
+                profile = get_profile("persuasion")
+                context = await prob_resolver.build_context(
+                    actor=a,
+                    target=b,
+                    action_type="social",
+                    location=loc,
+                )
+
+                result = prob_engine.roll(profile, context, a)
+
+                # Determine delta based on outcome quality
+                if result.quality == OutcomeQuality.CRITICAL_SUCCESS:
+                    delta = 3
+                elif result.quality == OutcomeQuality.SUCCESS:
+                    delta = 1
+                elif result.quality == OutcomeQuality.MARGINAL_SUCCESS:
+                    delta = 1
+                elif result.quality == OutcomeQuality.MARGINAL_FAILURE:
+                    delta = -1
+                elif result.quality == OutcomeQuality.FAILURE:
+                    delta = -1
+                elif result.quality == OutcomeQuality.CRITICAL_FAILURE:
+                    delta = -3
+                else:
+                    delta = 0
+
+                # Generate interaction narrative
+                interaction = f"{a} and {b} had a {result.quality.value.replace('_', ' ')} interaction."
+                if result.success:
+                    interaction += " They seem to get along well."
+                else:
+                    interaction += " There was some tension."
+
+                await self.ctx.chronicler.log_event(
+                    f"{a} and {b} interacted: {interaction} (prob={result.probability:.0%}, roll={result.roll:.0%})",
+                    story_time, group="social"
+                )
+                logger.info(f"Social interaction (prob): {a} <-> {b} ({result.quality.value}, delta {delta})")
+
+                # Apply relationship change via story engine effect
+                await self.ctx.story_engine.apply_effects(
+                    [{"type": "relationship_change", "source": a, "target": b, "delta": delta}],
+                    story_time
+                )
+            except Exception as e:
+                logger.warning(f"Probability-based social simulation failed, falling back to LLM: {e}")
+                await self._simulate_turn_fallback(a, b, loc, story_time)
+        else:
+            # Fallback to LLM-based interaction
+            await self._simulate_turn_fallback(a, b, loc, story_time)
+
+    async def _simulate_turn_fallback(self, a: str, b: str, loc: str, story_time: datetime) -> None:
+        """Fallback LLM-based social interaction when probability system is unavailable."""
         prompt = f"""
 Two characters, {a} and {b}, are both in the location "{loc}".
 Generate a short interaction (2‑3 sentences) that could happen between them.
@@ -136,7 +197,7 @@ Return JSON: {{"interaction": "text", "relationship_delta": integer between -3 a
                 f"{a} and {b} interacted: {interaction}",
                 story_time, group="social"
             )
-            logger.info(f"Social interaction: {a} <-> {b} (delta {delta})")
+            logger.info(f"Social interaction (LLM): {a} <-> {b} (delta {delta})")
 
             # Apply relationship change via story engine effect
             from .story_engine import StoryEngine
@@ -145,4 +206,4 @@ Return JSON: {{"interaction": "text", "relationship_delta": integer between -3 a
                 story_time
             )
         except Exception as e:
-            logger.warning(f"Social simulation failed: {e}")
+            logger.warning(f"Social simulation (fallback) failed: {e}")

@@ -15,9 +15,10 @@ MAX_LOG_SIZE = 10 * 1024 * 1024
 
 
 class Chronicler:
-    def __init__(self, log_path: Path, max_log_size: int = MAX_LOG_SIZE):
+    def __init__(self, log_path: Path, max_log_size: int = MAX_LOG_SIZE, world_memory=None):
         self.log_path = log_path
         self.max_log_size = max_log_size
+        self.world_memory = world_memory  # Optional unified world memory layer
         self._ensure_file()
 
     def _ensure_file(self):
@@ -63,6 +64,15 @@ class Chronicler:
         except OSError as e:
             logger.error(f"Failed to write event to log: {e}")
             raise
+
+        # Sync to unified world memory if available
+        if self.world_memory is not None:
+            await self.world_memory.add_event(
+                event_description=description,
+                group=group,
+                importance=0.4,
+            )
+
         return event_id
 
     async def get_timeline(self, since: Optional[datetime] = None, limit: int = 50) -> List[dict]:

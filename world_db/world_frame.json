@@ -6,7 +6,7 @@
   },
   "magic_system": {
     "name": "Soul Forging",
-    "rules": "Magic burns caster's lifespan. Each spell consumes hours, days, or years depending on scale. Spells permanently scar skin where cast. No external power source\u2014only internal soul fuel.",
+    "rules": "Magic burns caster's lifespan. Each spell consumes hours, days, or years depending on scale. Spells permanently scar skin where cast. No external power source—only internal soul fuel.",
     "cost": "Years of life, permanent disfigurement, eventual soul-death (void mind, empty husk)"
   },
   "races": [
@@ -111,7 +111,7 @@
       "abilities": [
         "Soul-void (magic cannot target or detect)",
         "Memory-drink (consume stolen memories for skills)",
-        "Shadow-echo (leaves no trace, no cost\u2014innate)"
+        "Shadow-echo (leaves no trace, no cost—innate)"
       ],
       "affiliations": [
         "Hollow",
@@ -149,6 +149,21 @@
         "Veinrock",
         "The Unwritten"
       ]
+    },
+    {
+      "name": "NPC_default_224"
+    },
+    {
+      "name": "NPC_default_186"
+    },
+    {
+      "name": "NPC_Driftkin Concord_884"
+    },
+    {
+      "name": "NPC_Ashborn_864"
+    },
+    {
+      "name": "NPC_Stone Oath_203"
     }
   ],
   "locations": [

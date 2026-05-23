@@ -47,7 +47,7 @@ def show(
         from world_builder.config import get_entity_store_path
         gm = BuilderGM(entity_store_path=get_entity_store_path(db_path))
         bi = BuilderInterface(db_path, gm=gm)
-        node = nav._find_entity(uid)
+        node = store.entities_by_uid.get(uid)
         if node:
             if not node.profile.l2:
                 console.print("[cyan]Completing L2...[/]")
@@ -195,14 +195,14 @@ def branch_from_narrative(
     # (Optional) Also store session snapshot in branch metadata
     console.print(f"[green]Branch '{branch_name}' created from narrative session '{session_id}'.[/]")
 
-# ── Build (layer generation) ───────────────────────────
+# ── Layer generation (replaces 'build') ─────────────────
 @app.command()
-def build(
+def layer(
     layer: str = typer.Option("all", help="Which layer to build: l1, l2, l3, or all"),
     episodes: int = typer.Option(0, help="Number of narrative scenes (only for 'all')"),
     db_path: Path = typer.Option(DEFAULT_DB_PATH, hidden=True),
 ):
-    """Use the world_builder to generate world layers."""
+    """Use the world_builder to generate world layers (alias: 'build')."""
     bi = BuilderInterface(db_path)
     if layer in ("l1", "all"):
         console.print("[cyan]Generating world frame & L1...[/]")
@@ -215,46 +215,7 @@ def build(
         bi.build_L3()
     console.print("[green]✓ Layers built.[/]")
 
-# ── Generate new entities ──────────────────────────────
-gen_app = typer.Typer(help="Generate new world content")
-app.add_typer(gen_app, name="generate")
 
-@gen_app.command("npc")
-def gen_npc(faction_or_race: str = typer.Argument(...), db_path: Path = typer.Option(DEFAULT_DB_PATH, hidden=True)):
-    bi = BuilderInterface(db_path)
-    node = bi.add_npc(faction_or_race)
-    console.print(f"[green]Created NPC: {node.name}[/]")
-
-@gen_app.command("item")
-def gen_item(item_type: str = typer.Argument("weapon"), rarity: str = typer.Option("uncommon"),
-             db_path: Path = typer.Option(DEFAULT_DB_PATH, hidden=True)):
-    bi = BuilderInterface(db_path)
-    node = bi.add_item(item_type, rarity)
-    console.print(f"[green]Created item: {node.name}[/]")
-
-@gen_app.command("faction")
-def gen_faction(db_path: Path = typer.Option(DEFAULT_DB_PATH, hidden=True)):
-    bi = BuilderInterface(db_path)
-    node = bi.add_faction()
-    console.print(f"[green]Created faction: {node.name}[/]")
-
-@gen_app.command("location")
-def gen_location(db_path: Path = typer.Option(DEFAULT_DB_PATH, hidden=True)):
-    bi = BuilderInterface(db_path)
-    node = bi.add_location()
-    console.print(f"[green]Created location: {node.name}[/]")
-
-@gen_app.command("event")
-def gen_event(db_path: Path = typer.Option(DEFAULT_DB_PATH, hidden=True)):
-    bi = BuilderInterface(db_path)
-    node = bi.add_event()
-    console.print(f"[green]Created event: {node.name}[/]")
-
-@gen_app.command("rule")
-def gen_rule(db_path: Path = typer.Option(DEFAULT_DB_PATH, hidden=True)):
-    bi = BuilderInterface(db_path)
-    node = bi.add_rule()
-    console.print(f"[green]Created rule: {node.name}[/]")
 
 # ── Visualize ──────────────────────────────────────────
 @app.command()

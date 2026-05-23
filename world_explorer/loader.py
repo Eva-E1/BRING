@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 from typing import List
+from world_core.utils import atomic_write_json
 from .models import Entity, LayeredProfile
 
 def load_entities(db_path: Path) -> List[Entity]:
@@ -25,3 +26,20 @@ def load_entities(db_path: Path) -> List[Entity]:
             updated_at=item.get("updated_at", 0.0),
         ))
     return entities
+
+
+def save_entities(db_path: Path, entities: List[Entity]) -> None:
+    """Save entities back to JSON file."""
+    file_path = db_path / "entities.json"
+    data = []
+    for e in entities:
+        data.append({
+            "uid": e.uid,
+            "name": e.name,
+            "entity_type": e.entity_type,
+            "profile": e.profile.to_dict(),
+            "group_id": e.group_id,
+            "created_at": e.created_at,
+            "updated_at": e.updated_at,
+        })
+    atomic_write_json(file_path, data)

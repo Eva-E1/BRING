@@ -25,6 +25,7 @@ class WorldClock:
         self.state_path = state_path
         self.story_engine = story_engine  # Inject after creation for callback support
         self.current_time = datetime.now()
+        self.global_luck = 0.5  # Global luck factor (0.0 - 1.0)
         self.scheduled_events: List[ScheduledEvent] = []
         self._callbacks: Dict[str, Callable] = {}  # Registry of callback functions
         self._load()
@@ -43,6 +44,7 @@ class WorldClock:
             try:
                 data = json.loads(self.state_path.read_text())
                 self.current_time = datetime.fromisoformat(data["current_time"])
+                self.global_luck = data.get("global_luck", 0.5)
                 self.scheduled_events = [
                     ScheduledEvent(
                         datetime.fromisoformat(e["time"]),
@@ -54,12 +56,14 @@ class WorldClock:
             except (json.JSONDecodeError, KeyError) as e:
                 logger.warning(f"Failed to load world clock state: {e}. Starting fresh.")
                 self.current_time = datetime.now()
+                self.global_luck = 0.5
                 self.scheduled_events = []
 
     def _save(self):
         """Save clock state to disk with atomic write."""
         data = {
             "current_time": self.current_time.isoformat(),
+            "global_luck": self.global_luck,
             "scheduled": [
                 {
                     "time": e.time.isoformat(),
@@ -145,6 +149,65 @@ class WorldClock:
             except Exception as e:
                 logger.error(f"Failed to generate random event: {e}")
 
+        elif callback_name == "set_global_luck":
+            # Set global luck value
+            luck = event.data.get("luck", 0.5)
+            self.set_global_luck(luck)
+
+        elif callback_name == "childhood_event" and self.story_engine:
+            # Handle childhood milestone events
+            char_name = event.data.get("character")
+            event_type = event.data.get("type")
+            description = event.data.get("description")
+
+            if char_name and event_type:
+                try:
+                    logger.info(f"Triggering childhood event {event_type} for {char_name}")
+                    # Generate a childhood vignette
+                    await self.story_engine.generate_event(
+                        self.current_time,
+                        [char_name],
+                        category="childhood_milestone",
+                        severity=0.4,
+                        context_override={
+                            "event_type": event_type,
+                            "description": description,
+                            "is_childhood_event": True,
+                        }
+                    )
+
+                    # Adjust skills based on event type
+                    if event_type == "magic_awakening" and hasattr(self.story_engine, 'npc_mgr'):
+                        npc = self.story_engine.npc_mgr.get(char_name)
+                        if npc:
+                            # Boost magic-related skills
+                            logger.info(f"Magic awakening for {char_name}, boosting magical aptitude")
+                except Exception as e:
+                    logger.error(f"Failed to process childhood event: {e}")
+
+        elif callback_name == "romance_event" and self.story_engine:
+            # Handle romance arc events
+            event_type = event.data.get("type")
+            actor = event.data.get("actor")
+            target = event.data.get("target")
+
+            if actor and target:
+                try:
+                    logger.info(f"Triggering romance event {event_type} for {actor} & {target}")
+                    # Generate a romance vignette
+                    await self.story_engine.generate_event(
+                        self.current_time,
+                        [actor, target],
+                        category="romance",
+                        severity=0.5,
+                        context_override={
+                            "event_type": event_type,
+                            "is_romance_event": True,
+                        }
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to process romance event: {e}")
+
         else:
             # Try to find custom registered callback
             custom_callback = self._get_callback(callback_name)
@@ -193,6 +256,16 @@ class WorldClock:
             }
             for e in self.scheduled_events
         ]
+
+    def set_global_luck(self, luck: float) -> None:
+        """Set the global luck value (0.0 to 1.0)."""
+        self.global_luck = max(0.0, min(1.0, luck))
+        self._save()
+        logger.info(f"Global luck set to {self.global_luck:.2f}")
+
+    def get_global_luck(self) -> float:
+        """Get the current global luck value."""
+        return self.global_luck
 
     def clear_scheduled_events(self, callback: Optional[str] = None) -> int:
         """Clear scheduled events, optionally filtered by callback name."""

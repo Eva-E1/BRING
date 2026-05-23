@@ -65,7 +65,7 @@
       "type": "setback",
       "description": "The heroes suffer a defeat or loss.",
       "scheduled_time": "2026-05-13T08:01:59.633555",
-      "triggered": false,
+      "triggered": true,
       "involved_entities": []
     },
     "ch1_victory": {
@@ -73,7 +73,7 @@
       "type": "victory",
       "description": "A small triumph that builds hope.",
       "scheduled_time": "2026-05-13T20:01:59.633555",
-      "triggered": false,
+      "triggered": true,
       "involved_entities": []
     },
     "ch1_cliffhanger": {
@@ -81,7 +81,7 @@
       "type": "cliffhanger",
       "description": "The chapter ends with a tense moment.",
       "scheduled_time": "2026-05-14T08:01:59.633555",
-      "triggered": false,
+      "triggered": true,
       "involved_entities": []
     },
     "ch2_inciting_incident": {
@@ -89,7 +89,7 @@
       "type": "inciting_incident",
       "description": "A surprising event pushes the story forward.",
       "scheduled_time": "2026-05-15T08:01:59.633555",
-      "triggered": false,
+      "triggered": true,
       "involved_entities": []
     },
     "ch2_revelation": {

@@ -1,0 +1,212 @@
+{
+  "e53db8db-de1f-4b57-8831-7f513089142c": {
+    "id": "e53db8db-de1f-4b57-8831-7f513089142c",
+    "title": "Track Shard Beneath Ash",
+    "description": "Follow map, reach shard before Varin. Ashfall thick, path shifts weekly.",
+    "giver": "Varin Lume",
+    "objectives": [
+      {
+        "type": "complete",
+        "target": "Follow map, reach shard before Varin. Ashfall thick, path shifts weekly.",
+        "completed": false
+      }
+    ],
+    "status": "active",
+    "created_at": "2026-05-16T16:55:22.535951"
+  },
+  "f205becd-3ee1-41e7-82d3-cc8b53b41e49": {
+    "id": "f205becd-3ee1-41e7-82d3-cc8b53b41e49",
+    "title": "Hollow Retrieval",
+    "description": "Track The Shadow, free Varin Lume before soul-thread snaps.",
+    "giver": "Varin Lume",
+    "objectives": [
+      {
+        "type": "complete",
+        "target": "Track The Shadow, free Varin Lume before soul-thread snaps.",
+        "completed": false
+      }
+    ],
+    "status": "active",
+    "created_at": "2026-05-16T17:10:32.357044"
+  },
+  "b7595d56-710c-4039-85f3-b68ba350484e": {
+    "id": "b7595d56-710c-4039-85f3-b68ba350484e",
+    "title": "Heal Nyssara",
+    "description": "Nyssara needs healing after veinrock splash. Find cure.",
+    "giver": "Klein Belmont",
+    "objectives": [
+      {
+        "type": "complete",
+        "target": "Nyssara needs healing after veinrock splash. Find cure.",
+        "completed": false
+      }
+    ],
+    "status": "active",
+    "created_at": "2026-05-16T17:10:35.530045"
+  },
+  "7f84add7-d995-4407-83fe-4b3a9dc87c87": {
+    "id": "7f84add7-d995-4407-83fe-4b3a9dc87c87",
+    "title": "Map of Salted Souls",
+    "description": "Follow map to vessel where souls move through salt wind; unlock path to Vorath's heart.",
+    "giver": "TestBaby",
+    "objectives": [
+      {
+        "type": "complete",
+        "target": "Follow map to vessel where souls move through salt wind; unlock path to Vorath's heart.",
+        "completed": false
+      }
+    ],
+    "status": "active",
+    "created_at": "2026-05-20T08:50:58.873172"
+  },
+  "5e1cab01-c522-4869-aad3-359f053fbf4d": {
+    "id": "5e1cab01-c522-4869-aad3-359f053fbf4d",
+    "title": "Fragment of Tide",
+    "description": "Retrieve Ancient Rune Fragment from beneath central plaza stones to unlock memory of Vorath's sea-ways.",
+    "giver": "Zaltar",
+    "objectives": [
+      {
+        "type": "complete",
+        "target": "Retrieve Ancient Rune Fragment from beneath central plaza stones to unlock memory of Vorath's sea-ways.",
+        "completed": false
+      }
+    ],
+    "status": "active",
+    "created_at": "2026-05-20T08:54:29.501695"
+  },
+  "e202c3b9-f78e-4f2b-8bf9-285883a69e8f": {
+    "id": "e202c3b9-f78e-4f2b-8bf9-285883a69e8f",
+    "title": "Shards Across the Docks",
+    "description": "Translate veinrock shard runes with Driftkin Concord_884; locate the hidden corridor the shard points to.",
+    "giver": "Nyssara Keldrel",
+    "objectives": [
+      {
+        "type": "complete",
+        "target": "Translate veinrock shard runes with Driftkin Concord_884; locate the hidden corridor the shard points to.",
+        "completed": false
+      }
+    ],
+    "status": "active",
+    "created_at": "2026-05-20T08:55:02.823899"
+  },
+  "72f58ed1-26a1-4ce3-984a-d559f34203f1": {
+    "id": "72f58ed1-26a1-4ce3-984a-d559f34203f1",
+    "title": "Zaltar's Purpose",
+    "description": "Zaltar camps near Last Ember Ruin. Varin Lume knows why. Kaelen paid for truth. Find Varin before Lyra's patience ends.",
+    "giver": "Zaltar",
+    "objectives": [
+      {
+        "type": "complete",
+        "target": "Zaltar camps near Last Ember Ruin. Varin Lume knows why. Kaelen paid for truth. Find Varin before Lyra's patience ends.",
+        "completed": false
+      }
+    ],
+    "status": "active",
+    "created_at": "2026-05-20T08:55:12.550015"
+  },
+  "4f53d81d-a54a-43d5-bd7d-257b02f4981c": {
+    "id": "4f53d81d-a54a-43d5-bd7d-257b02f4981c",
+    "title": "The Veinrock Smuggling Accusation",
+    "description": "Investigate whether the Driftkin Concord truly smuggled veinrock shards, or if Brakus's accusation was false.",
+    "giver": "Zaltar",
+    "objectives": [
+      {
+        "type": "complete",
+        "target": "Investigate whether the Driftkin Concord truly smuggled veinrock shards, or if Brakus's accusation was false.",
+        "completed": false
+      }
+    ],
+    "status": "active",
+    "created_at": "2026-05-22T10:09:46.876725"
+  },
+  "fb379785-1e57-4df7-87c1-82cc262ec1c5": {
+    "id": "fb379785-1e57-4df7-87c1-82cc262ec1c5",
+    "title": "The Oil's Whisper",
+    "description": "Resist or accept the dark pact oil. Brek-of-Three-Depths holds the vial.",
+    "giver": "Zaltar",
+    "objectives": [
+      {
+        "type": "complete",
+        "target": "Resist or accept the dark pact oil. Brek-of-Three-Depths holds the vial.",
+        "completed": false
+      }
+    ],
+    "status": "active",
+    "created_at": "2026-05-22T10:10:17.010729"
+  },
+  "bcfb49f5-45b6-46e6-9daf-a5b5b7de2a90": {
+    "id": "bcfb49f5-45b6-46e6-9daf-a5b5b7de2a90",
+    "title": "Unquiet Embers",
+    "description": "Brakus Ironjaw's forge flared wrong. Find why ash-dusk thickened inside his smithy.",
+    "giver": "Zaltar",
+    "objectives": [
+      {
+        "type": "complete",
+        "target": "Brakus Ironjaw's forge flared wrong. Find why ash-dusk thickened inside his smithy.",
+        "completed": false
+      }
+    ],
+    "status": "active",
+    "created_at": "2026-05-22T10:20:02.183734"
+  },
+  "5bb6c038-dcf4-434c-be0a-c41bcfaf634a": {
+    "id": "5bb6c038-dcf4-434c-be0a-c41bcfaf634a",
+    "title": "The Driftkin's Veiled Whispers",
+    "description": "Something foul is stirring the Driftkin Concord against Zaltar. Kaelen may need to intervene before suspicion turns to bloodshed.",
+    "giver": "NPC_Driftkin Concord_884",
+    "objectives": [
+      {
+        "type": "complete",
+        "target": "Something foul is stirring the Driftkin Concord against Zaltar. Kaelen may need to intervene before suspicion turns to bloodshed.",
+        "completed": false
+      }
+    ],
+    "status": "active",
+    "created_at": "2026-05-22T10:37:09.230202"
+  },
+  "f255c1de-8cd6-4f3b-a6c8-985fdf2860f1": {
+    "id": "f255c1de-8cd6-4f3b-a6c8-985fdf2860f1",
+    "title": "Feud on the Tide",
+    "description": "Brek seeks recompense from Kaelen for the collapsed stall. Zaltar eyes the bronze counterweight as leverage.",
+    "giver": "Kaelen",
+    "objectives": [
+      {
+        "type": "complete",
+        "target": "Brek seeks recompense from Kaelen for the collapsed stall. Zaltar eyes the bronze counterweight as leverage.",
+        "completed": false
+      }
+    ],
+    "status": "active",
+    "created_at": "2026-05-22T10:37:39.425443"
+  },
+  "18bd0166-6f7a-4538-8bd7-a6c508085ff0": {
+    "id": "18bd0166-6f7a-4538-8bd7-a6c508085ff0",
+    "title": "Cleanse the Talismans",
+    "description": "Retrieve and purify the corrupted Veinrock talismans before The Shadow's malice spreads.",
+    "giver": "The Shadow",
+    "objectives": [
+      {
+        "type": "complete",
+        "target": "Retrieve and purify the corrupted Veinrock talismans before The Shadow's malice spreads.",
+        "completed": false
+      }
+    ],
+    "status": "active",
+    "created_at": "2026-05-22T15:12:19.246891"
+  },
+  "5cc2ac29-394f-4b70-aedc-89492af5c6df": {
+    "id": "5cc2ac29-394f-4b70-aedc-89492af5c6df",
+    "title": "Ashfall Anomaly",
+    "description": "Investigate why ash resurges from Last Ember Ruin weekly and its bond to soul-stuff.",
+    "giver": "NPC_default_224",
+    "objectives": [
+      {
+        "type": "complete",
+        "target": "Investigate why ash resurges from Last Ember Ruin weekly and its bond to soul-stuff.",
+        "completed": false
+      }
+    ],
+    "status": "active",
+    "created_at": "2026-05-22T15:15:35.027323"
+  }
+}

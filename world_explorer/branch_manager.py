@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Dict, Any
 import networkx as nx
 
+from world_core.utils import atomic_write_json
+
 class Branch:
     def __init__(self, parent: str = "main"):
         self.parent = parent
@@ -43,7 +45,7 @@ class BranchManager:
                 "additions": branch.additions,
                 "deletions": branch.deletions,
             }
-        self._branches_file().write_text(json.dumps(ser, indent=2))
+        atomic_write_json(self._branches_file(), ser)
 
     def create(self, name: str, from_branch: str = "main"):
         if name in self.branches:

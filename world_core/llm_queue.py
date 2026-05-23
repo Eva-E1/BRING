@@ -1,4 +1,3 @@
-```python
 """Global LLM Queue for prioritized request handling."""
 from __future__ import annotations
 import asyncio

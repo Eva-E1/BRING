@@ -1,7 +1,4 @@
-/home/ali/Lab/world_director/models.py
-```
-
-```python
+"""Data models for the director."""
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional, Literal
 from datetime import datetime
@@ -18,7 +15,7 @@ class TaskPriority(Enum):
 class DirectorTask(BaseModel):
     """A task to be executed by an agent."""
     id: str
-    type: Literal["expand_branch", "add_entity", "edit_entity", "generate_event", "advance_arc", "evolve_world"]
+    type: Literal["expand_branch", "add_entity", "edit_entity", "generate_event", "advance_arc", "evolve_world", "llm_text", "llm_json"]
     priority: TaskPriority
     data: Dict[str, Any]
     created_at: datetime

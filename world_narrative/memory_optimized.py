@@ -21,19 +21,33 @@ import numpy as np
 
 # For vector similarity
 try:
-    from sklearn.metrics.pairwise import cosine_similarity
+    from sklearn.metrics.pairwise import cosine_similarity as sklearn_cosine
     HAS_SKLEARN = True
 except ImportError:
     HAS_SKLEARN = False
-    # Fallback: implement simple dot product
-    def simple_cosine(a, b):
-        dot = sum(x*y for x, y in zip(a, b))
-        norm_a = math.sqrt(sum(x*x for x in a))
-        norm_b = math.sqrt(sum(y*y for y in b))
-        if norm_a == 0 or norm_b == 0:
-            return 0.0
-        return dot / (norm_a * norm_b)
-    cosine_similarity = simple_cosine
+    sklearn_cosine = None
+
+# Helper to handle both 1D and 2D arrays for sklearn
+def cosine_similarity(a, b):
+    """Compute cosine similarity, handling both 1D and 2D arrays."""
+    if HAS_SKLEARN and sklearn_cosine:
+        # Ensure 2D: (1, n_features) for single vectors
+        a_arr = np.array(a)
+        b_arr = np.array(b)
+        if a_arr.ndim == 1:
+            a_arr = a_arr.reshape(1, -1)
+        if b_arr.ndim == 1:
+            b_arr = b_arr.reshape(1, -1)
+        return sklearn_cosine(a_arr, b_arr)[0][0]
+    # Fallback: simple dot product
+    a_flat = np.array(a).flatten()
+    b_flat = np.array(b).flatten()
+    dot = sum(x*y for x, y in zip(a_flat, b_flat))
+    norm_a = math.sqrt(sum(x*x for x in a_flat))
+    norm_b = math.sqrt(sum(y*y for y in b_flat))
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return dot / (norm_a * norm_b)
 
 from world_builder.graph_manager import GraphManager
 from world_builder.llm import LLMClient
@@ -63,23 +77,12 @@ class EpisodicMemory:
 
 
 @dataclass
-class SemanticMemory:
-    """Long‑term semantic knowledge extracted from episodes."""
-    id: str
-    fact: str
-    source_episodes: List[str]   # IDs of episodes that contributed
-    confidence: float            # 0.0 - 1.0
-    embedding: Optional[List[float]] = None
-
-
-@dataclass
 class NPCProfile:
     """Full NPC profile with layered memory."""
     name: str
     uid: str                     # f"{entity_type}:{name}"
     short_term: List[EpisodicMemory] = field(default_factory=list)   # last 10-20 events
     long_term_episodic: List[EpisodicMemory] = field(default_factory=list)  # consolidated
-    semantic: List[SemanticMemory] = field(default_factory=list)
     # Runtime state (kept for fast access)
     location: str = "unknown"
     health: int = 100
@@ -88,6 +91,12 @@ class NPCProfile:
     inventory: Set[str] = field(default_factory=set)
     tags: Dict[str, Any] = field(default_factory=dict)
     updated_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    # Skills for probability system (0.0 to 1.0)
+    skills: Dict[str, float] = field(default_factory=lambda: {
+        "strength": 0.5, "dexterity": 0.5, "charisma": 0.5,
+        "intelligence": 0.5, "wisdom": 0.5, "luck": 0.5,
+        "combat_skill": 0.5, "persuasion": 0.5, "stealth": 0.5,
+    })
 
 
 # ==================================================================
@@ -95,7 +104,7 @@ class NPCProfile:
 # ==================================================================
 
 class MemoryOptimizer:
-    """Runs in background to consolidate, prune, and re‑embed memories."""
+    """Runs in background to prune and promote memories."""
 
     def __init__(
         self,
@@ -105,7 +114,6 @@ class MemoryOptimizer:
         short_term_limit: int = 20,
         max_long_term: int = 500,
         importance_threshold: float = 0.4,
-        similarity_threshold: float = 0.85,
         max_embedding_cache_size: int = 1000,
     ):
         self.store = store
@@ -114,7 +122,6 @@ class MemoryOptimizer:
         self.short_term_limit = short_term_limit
         self.max_long_term = max_long_term
         self.importance_threshold = importance_threshold
-        self.similarity_threshold = similarity_threshold
         self.max_embedding_cache_size = max_embedding_cache_size
         self._running = False
         self._task: Optional[asyncio.Task] = None
@@ -182,88 +189,7 @@ class MemoryOptimizer:
                 )
                 profile.long_term_episodic = profile.long_term_episodic[:self.max_long_term]
 
-            # 4. Consolidate episodic into semantic memory
-            await self._consolidate_to_semantic(npc_name, profile)
-
-            # 5. Deduplicate semantic memories
-            await self._deduplicate_semantic(npc_name, profile)
-
         self.store._save()
-
-    async def _consolidate_to_semantic(self, npc_name: str, profile: NPCProfile):
-        """Extract semantic facts from episodic memories using LLM."""
-        # Find episodes not yet consolidated
-        unconsolidated = [m for m in profile.long_term_episodic if not m.consolidated]
-        if not unconsolidated:
-            return
-
-        batch_size = 5
-        for i in range(0, len(unconsolidated), batch_size):
-            batch = unconsolidated[i:i+batch_size]
-            episodes_text = "\n".join(
-                f"- [{m.timestamp.isoformat()}] {m.description}"
-                for m in batch
-            )
-            prompt = f"""
-You are extracting semantic knowledge for the character "{npc_name}".
-From the following episodic memories, extract **facts** that become part of their long‑term knowledge base.
-Each fact should be a statement about the world, other characters, or themselves.
-Return a JSON array of strings (each string is one fact).
-Skip trivial or redundant facts.
-
-Episodes:
-{episodes_text}
-"""
-            try:
-                result = await self.llm_queue.generate_json(prompt, priority=TaskPriority.LOW, temperature=0.3)
-                facts = result if isinstance(result, list) else []
-                for fact in facts:
-                    # Check if fact already exists in semantic memory
-                    existing = any(s.fact == fact for s in profile.semantic)
-                    if not existing:
-                        semantic = SemanticMemory(
-                            id=f"{npc_name}_sem_{len(profile.semantic)}_{datetime.now().timestamp()}",
-                            fact=fact,
-                            source_episodes=[m.id for m in batch],
-                            confidence=0.7,
-                        )
-                        profile.semantic.append(semantic)
-                        # Compute embedding for semantic fact
-                        await self.store._embed_text(semantic, npc_name, "semantic")
-                # Mark episodes as consolidated
-                for m in batch:
-                    m.consolidated = True
-            except Exception as e:
-                logger.warning(f"Semantic consolidation failed for {npc_name}: {e}")
-
-    async def _deduplicate_semantic(self, npc_name: str, profile: NPCProfile):
-        """Merge similar semantic memories using embedding similarity."""
-        if len(profile.semantic) < 2:
-            return
-
-        # Ensure all semantic memories have embeddings
-        for sem in profile.semantic:
-            if sem.embedding is None:
-                await self.store._embed_text(sem, npc_name, "semantic")
-
-        to_remove = set()
-        for i, s1 in enumerate(profile.semantic):
-            if s1.id in to_remove:
-                continue
-            for j, s2 in enumerate(profile.semantic[i+1:], start=i+1):
-                if s2.id in to_remove:
-                    continue
-                # Compute similarity
-                if s1.embedding and s2.embedding:
-                    sim = cosine_similarity(s1.embedding, s2.embedding)
-                    if sim >= self.similarity_threshold:
-                        # Merge s2 into s1
-                        s1.source_episodes.extend(s2.source_episodes)
-                        s1.confidence = max(s1.confidence, s2.confidence)
-                        to_remove.add(s2.id)
-
-        # Remove duplicates
-        profile.semantic = [s for s in profile.semantic if s.id not in to_remove]
 
 
 # ==================================================================
@@ -280,17 +206,20 @@ class OptimizedMemoryStore:
     """
 
     def __init__(self, state_path: Path, gm: GraphManager, llm_queue: GlobalLLMQueue, llm: LLMClient = None,
-                 max_embedding_cache_size: int = 1000):
+                 max_embedding_cache_size: int = 1000, world_memory=None):
         self.state_path = state_path
         self.gm = gm
         self.llm = llm  # Keep raw LLM for embeddings (not handled by queue)
         self.llm_queue = llm_queue  # Queue for text generation
+        self.max_embedding_cache_size = max_embedding_cache_size
         self._npcs: Dict[str, NPCProfile] = {}
         self._embedding_cache_dir = state_path / "embeddings"
         self._embedding_cache_dir.mkdir(parents=True, exist_ok=True)
         self._load()
         self.optimizer = MemoryOptimizer(self, llm_queue, max_embedding_cache_size=max_embedding_cache_size)
         self._embedding_lock = asyncio.Lock()
+        self._npcs_lock = asyncio.Lock()  # Lock for thread-safe NPC dict access
+        self.world_memory = world_memory  # Optional unified world memory layer
 
     # ------------------------------------------------------------------
     # Persistence
@@ -329,22 +258,12 @@ class OptimizedMemoryStore:
                             location=m.get("location", ""),
                             consolidated=m.get("consolidated", False),
                         ))
-                    # Reconstruct semantic
-                    semantic = []
-                    for s in d.get("semantic", []):
-                        semantic.append(SemanticMemory(
-                            id=s["id"],
-                            fact=s["fact"],
-                            source_episodes=s.get("source_episodes", []),
-                            confidence=s.get("confidence", 0.7),
-                        ))
                     # Build profile
                     profile = NPCProfile(
                         name=name,
                         uid=d["uid"],
                         short_term=short_term,
                         long_term_episodic=long_term,
-                        semantic=semantic,
                         location=d.get("location", "unknown"),
                         health=d.get("health", 100),
                         mood=d.get("mood", "neutral"),
@@ -389,15 +308,6 @@ class OptimizedMemoryStore:
                     }
                     for m in p.long_term_episodic
                 ],
-                "semantic": [
-                    {
-                        "id": s.id,
-                        "fact": s.fact,
-                        "source_episodes": s.source_episodes,
-                        "confidence": s.confidence,
-                    }
-                    for s in p.semantic
-                ],
                 "location": p.location,
                 "health": p.health,
                 "mood": p.mood,
@@ -436,8 +346,6 @@ class OptimizedMemoryStore:
             # Generate text to embed
             if isinstance(obj, EpisodicMemory):
                 text = f"{obj.description} [Importance: {obj.importance}, Emotion: {obj.emotion}]"
-            elif isinstance(obj, SemanticMemory):
-                text = obj.fact
             else:
                 text = str(obj)
 
@@ -451,7 +359,7 @@ class OptimizedMemoryStore:
                     return embedding
             except Exception as e:
                 logger.warning(f"Embedding failed for {npc_name}: {e}")
-                return [0.0] * 384  # fallback zero vector
+                return [0.0] * 384  # fallback zero vector (1D)
 
     async def _cleanup_embedding_cache(self):
         """Remove old cache files if exceeding max_embedding_cache_size."""
@@ -477,10 +385,22 @@ class OptimizedMemoryStore:
 
     async def register(self, name: str, uid: str, location: str = "unknown") -> NPCProfile:
         """Register a new NPC or return existing."""
-        if name not in self._npcs:
-            self._npcs[name] = NPCProfile(name=name, uid=uid, location=location)
-            self._save()
-        return self._npcs[name]
+        async with self._npcs_lock:
+            if name not in self._npcs:
+                # Initialize with default skills (will be overridden by L2 data if available)
+                default_skills = {
+                    "strength": 0.5, "dexterity": 0.5, "charisma": 0.5,
+                    "intelligence": 0.5, "wisdom": 0.5, "luck": 0.5,
+                    "combat_skill": 0.5, "persuasion": 0.5, "stealth": 0.5,
+                }
+                self._npcs[name] = NPCProfile(
+                    name=name,
+                    uid=uid,
+                    location=location,
+                    skills=default_skills,
+                )
+                self._save()
+            return self._npcs[name]
 
     async def add_memory(
         self,
@@ -511,6 +431,16 @@ class OptimizedMemoryStore:
         )
         profile.short_term.append(memory)
         self._save()
+
+        # Sync to unified world memory if available
+        if self.world_memory is not None:
+            await self.world_memory.add_npc_memory(
+                npc_name=name,
+                content=description,
+                importance=importance,
+                metadata={"emotion": emotion, "location": location or profile.location}
+            )
+
         return mem_id
 
     async def get_memories(
@@ -545,44 +475,13 @@ class OptimizedMemoryStore:
         results.sort(key=lambda m: (m.timestamp.timestamp(), m.importance), reverse=True)
         return results[:limit]
 
-    async def search_semantic(
-        self,
-        name: str,
-        query: str,
-        top_k: int = 5,
-        min_confidence: float = 0.5,
-    ) -> List[Tuple[SemanticMemory, float]]:
-        """
-        Search semantic memory using embedding similarity.
-        Returns list of (SemanticMemory, similarity_score).
-        """
-        profile = self._npcs.get(name)
-        if not profile or not profile.semantic:
-            return []
 
-        # Embed the query
-        query_emb = await self._embed_text(query, name, "query")
-
-        # Get embeddings for all semantic memories
-        scored = []
-        for sem in profile.semantic:
-            if sem.confidence < min_confidence:
-                continue
-            if sem.embedding is None:
-                sem.embedding = await self._embed_text(sem, name, "semantic")
-            if sem.embedding:
-                sim = cosine_similarity(query_emb, sem.embedding)
-                scored.append((sem, sim))
-
-        scored.sort(key=lambda x: x[1], reverse=True)
-        return scored[:top_k]
 
     async def get_relevant_memories(
         self,
         name: str,
         context: str,
         top_k: int = 10,
-        include_semantic: bool = True,
     ) -> List[Dict[str, Any]]:
         """
         Retrieve memories most relevant to a given context string.
@@ -603,14 +502,6 @@ class OptimizedMemoryStore:
             if mem.embedding:
                 sim = cosine_similarity(context_emb, mem.embedding)
                 candidates.append(("episodic", mem, sim))
-
-        if include_semantic:
-            for sem in profile.semantic:
-                if sem.embedding is None:
-                    sem.embedding = await self._embed_text(sem, name, "semantic")
-                if sem.embedding:
-                    sim = cosine_similarity(context_emb, sem.embedding)
-                    candidates.append(("semantic", sem, sim))
 
         candidates.sort(key=lambda x: x[2], reverse=True)
 
@@ -639,51 +530,54 @@ class OptimizedMemoryStore:
     # ------------------------------------------------------------------
 
     async def move(self, name: str, location: str, story_time: datetime) -> None:
-        profile = self._npcs.get(name)
-        if profile:
-            profile.location = location
-            profile.updated_at = story_time.isoformat()
-            self._save()
-            # Add memory of movement if significant
-            if profile.location != location:
-                await self.add_memory(
-                    name,
-                    f"Moved to {location}",
-                    emotion="neutral",
-                    importance=0.3,
-                    location=location,
-                )
+        async with self._npcs_lock:
+            profile = self._npcs.get(name)
+            if profile:
+                profile.location = location
+                profile.updated_at = story_time.isoformat()
+                self._save()
+                # Add memory of movement if significant
+                if profile.location != location:
+                    await self.add_memory(
+                        name,
+                        f"Moved to {location}",
+                        emotion="neutral",
+                        importance=0.3,
+                        location=location,
+                    )
 
     async def adjust_health(self, name: str, delta: int) -> int:
-        profile = self._npcs.get(name)
-        if profile:
-            profile.health = max(0, min(100, profile.health + delta))
-            self._save()
-            # Add memory if significant health change
-            if abs(delta) >= 15:
-                emotion = "fear" if delta < 0 else "joy"
-                await self.add_memory(
-                    name,
-                    f"Health changed by {delta}",
-                    emotion=emotion,
-                    importance=0.4,
-                )
-        return profile.health if profile else 100
+        async with self._npcs_lock:
+            profile = self._npcs.get(name)
+            if profile:
+                profile.health = max(0, min(100, profile.health + delta))
+                self._save()
+                # Add memory if significant health change
+                if abs(delta) >= 15:
+                    emotion = "fear" if delta < 0 else "joy"
+                    await self.add_memory(
+                        name,
+                        f"Health changed by {delta}",
+                        emotion=emotion,
+                        importance=0.4,
+                    )
+            return profile.health if profile else 100
 
     async def set_mood(self, name: str, mood: str) -> None:
-        profile = self._npcs.get(name)
-        if profile:
-            old_mood = profile.mood
-            profile.mood = mood
-            profile.updated_at = datetime.now().isoformat()
-            self._save()
-            if old_mood != mood:
-                await self.add_memory(
-                    name,
-                    f"Mood changed from {old_mood} to {mood}",
-                    emotion=mood,
-                    importance=0.2,
-                )
+        async with self._npcs_lock:
+            profile = self._npcs.get(name)
+            if profile:
+                old_mood = profile.mood
+                profile.mood = mood
+                profile.updated_at = datetime.now().isoformat()
+                self._save()
+                if old_mood != mood:
+                    await self.add_memory(
+                        name,
+                        f"Mood changed from {old_mood} to {mood}",
+                        emotion=mood,
+                        importance=0.2,
+                    )
 
     async def add_goal(self, name: str, goal: str) -> None:
         profile = self._npcs.get(name)

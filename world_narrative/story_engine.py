@@ -19,6 +19,12 @@ from .validation import WorldValidator
 from .quest_manager import QuestManager
 from .social_sim import SocialSimulator
 from .world_clock import WorldClock
+from world_core.probability import (
+    ProbabilityEngine,
+    ProbabilityContextResolver,
+    get_profile,
+    OutcomeQuality,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +71,9 @@ class StoryEngine:
         social_sim: SocialSimulator,
         clock: WorldClock,
         graph_store: Optional[GraphStore] = None,
+        world_memory: Optional["WorldMemory"] = None,
+        prob_engine: Optional[ProbabilityEngine] = None,
+        prob_resolver: Optional[ProbabilityContextResolver] = None,
     ):
         self.llm_queue = llm_queue
         self.gm = gm
@@ -77,6 +86,9 @@ class StoryEngine:
         self.social_sim = social_sim
         self.clock = clock
         self.graph_store = graph_store
+        self.world_memory = world_memory
+        self.prob_engine = prob_engine
+        self.prob_resolver = prob_resolver
         self._villain_clocks: Dict[str, int] = {}
         self._villain_clocks_path = chronicler.log_path.parent / "villain_clocks.json"
         self._recommender = None
@@ -280,6 +292,53 @@ class StoryEngine:
 
                 elif etype == "record_incident":
                     await self.chronicler.log_event(eff["label"], story_time)
+
+                elif etype == "chance_action":
+                    # Probability-based action with success/failure effects
+                    profile_name = eff.get("profile", "generic")
+                    actor = eff.get("actor")
+                    target = eff.get("target")
+
+                    if not actor or not self.prob_engine or not self.prob_resolver:
+                        logger.warning("chance_action missing actor or probability system")
+                        continue
+
+                    try:
+                        profile = get_profile(profile_name)
+                        if not profile:
+                            logger.warning(f"Unknown probability profile: {profile_name}")
+                            continue
+
+                        context = await self.prob_resolver.build_context(
+                            actor=actor,
+                            target=target,
+                            action_type=profile_name,
+                            location=eff.get("location", ""),
+                            extra=eff.get("extra", {}),
+                        )
+
+                        result = self.prob_engine.roll(profile, context, actor)
+
+                        # Apply success or failure effects
+                        if result.success:
+                            await self.apply_effects(eff.get("success_effects", []), story_time, involved_entities)
+                        else:
+                            await self.apply_effects(eff.get("failure_effects", []), story_time, involved_entities)
+
+                        # Apply critical effects if applicable
+                        if result.quality.is_critical():
+                            critical_key = "critical_success_effects" if result.success else "critical_failure_effects"
+                            await self.apply_effects(eff.get(critical_key, []), story_time, involved_entities)
+
+                        # Log the outcome
+                        await self.chronicler.log_event(
+                            f"{actor} attempted {profile_name}: {result.quality.value} "
+                            f"(prob={result.probability:.0%}, roll={result.roll:.0%})",
+                            story_time,
+                            group="probability"
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to process chance_action: {e}")
 
                 else:
                     logger.debug(f"Unknown effect type: {etype}")

@@ -377,24 +377,8 @@ def view_entity(
                             title=f"{node.entity_type}: {node.name} (Full Profile)",
                             border_style="border"))
 
-@app.command()
-def search(query: str, db_path: Optional[Path] = typer.Option(None)):
-    gm = _get_gm(db_path)
-    async def run():
-        with console.status("[accent]🔍 Searching...[/]", spinner="dots"):
-            results = await gm.search(query, limit=10)
-        if not results:
-            console.print("[warning]No matches found.[/]")
-        else:
-            table = Table(title=f"🔍 Results for '{query}'", box=box.ROUNDED,
-                          header_style="table.header", style="table.row", border_style="border")
-            table.add_column("Name")
-            table.add_column("Type")
-            table.add_column("Summary")
-            for r in results:
-                table.add_row(r["name"], r["type"], r["summary"])
-            console.print(table)
-    run_async(run())
+# Note: search command removed - use "world explore search" instead
+
 
 @app.command()
 def validate(db_path: Optional[Path] = typer.Option(None)):

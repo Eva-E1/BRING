@@ -1,7 +1,4 @@
-/home/ali/Lab/world_director/agent_coordinator.py
-```
-
-```python
+"""Agent coordinator for prioritized task execution."""
 from __future__ import annotations
 import asyncio
 import heapq
