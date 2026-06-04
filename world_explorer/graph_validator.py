@@ -62,7 +62,7 @@ class GraphValidator:
             for layer in ["l2", "l3"]:
                 affs = ent.profile.get_layer(layer).get("affiliations", [])
                 for aff in affs:
-                    tgt = self.name_index.resolve(aff, set(self.graph.nodes()))
+                    tgt = self.name_index.resolve(aff)
                     if tgt and not self.graph.has_edge(n, tgt):
                         implicit.append({
                             "source": n,
@@ -74,7 +74,7 @@ class GraphValidator:
             # Check current_location
             loc = ent.profile.l2.get("current_location") or ent.profile.l3.get("current_location")
             if loc:
-                tgt = self.name_index.resolve(loc, set(self.graph.nodes()))
+                tgt = self.name_index.resolve(loc)
                 if tgt and not self.graph.has_edge(n, tgt):
                     implicit.append({
                         "source": n,

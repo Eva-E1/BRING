@@ -4,7 +4,7 @@ import logging
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, TYPE_CHECKING
 
 from world_builder.graph_manager import GraphManager
 from world_core.llm_queue import GlobalLLMQueue
@@ -14,6 +14,8 @@ from world_narrative.chronicler import Chronicler
 from world_narrative.director import Director
 from world_narrative.story_engine import StoryEngine
 from world_narrative.quest_manager import QuestManager
+from world_narrative.world_clock import WorldClock
+from world_narrative.validation import WorldValidator
 from world_core.probability import (
     ProbabilityEngine,
     ProbabilityContextResolver,
@@ -37,6 +39,17 @@ class RoleplayEngine:
     Advanced roleplay system with third‑person narrative, memory, and agents.
     The LLM never speaks or acts for the user's character.
     """
+
+    # Precompiled patterns for more precise input classification
+    _MOVE_PATTERNS = re.compile(
+        r"^(?:go|move|travel|walk|run|head)\s+(?:to|toward|into|for)\b",
+        re.IGNORECASE,
+    )
+    _TALK_PATTERNS = re.compile(
+        r"^(?:say\s+to|talk\s+to|ask|tell|shout\s+at|whisper\s+to)\b",
+        re.IGNORECASE,
+    )
+    _COMMAND_PATTERN = re.compile(r"^/\S+")
 
     def __init__(
         self,
@@ -176,21 +189,20 @@ class RoleplayEngine:
 
     async def process_input(self, user_input: str) -> str:
         """Main entry point: process user action/statement, return narrative."""
-        # Handle commands
-        if user_input.strip().startswith("/"):
-            return await self._handle_command(user_input.strip()[1:])
+        stripped = user_input.strip()
 
-        # Determine if user is moving, talking, or performing action
-        lower = user_input.lower()
-        if any(token in lower for token in ("go", "move", "travel", "walk", "run", "head to")):
+        # Handle slash commands first
+        if stripped.startswith("/"):
+            return await self._handle_command(stripped[1:])
+
+        # Pattern-based classification (more precise than keyword search)
+        if self._MOVE_PATTERNS.match(stripped):
             return await self._handle_movement(user_input)
-        elif any(
-            token in lower
-            for token in ("say", "ask", "tell", "shout", "whisper", "talk to")
-        ):
+        if self._TALK_PATTERNS.match(stripped):
             return await self._handle_dialogue(user_input)
-        else:
-            return await self._handle_generic_action(user_input)
+
+        # Default: treat as a freeform narrative action
+        return await self._handle_generic_action(user_input)
 
     async def _handle_movement(self, user_input: str) -> str:
         """Process movement to a new location."""

@@ -96,7 +96,7 @@ body{height:100%;background:var(--black);font-family:var(--font-mono);font-size:
 .msg--success{color:var(--success)}
 .msg--warn{color:var(--warning)}
 .msg--interactive{color:var(--interactive)}
-.msg--hero{color:var(--text-display);font-family:var(--font-display);font-size:52px;font-variation-settings:'ROND' 22;font-weight:700;letter-spacing:-0.04em;line-height:1.0;padding:20px 0 8px}
+.msg--hero{color:var(--text-display);font-family:var(--font-display);font-size:52px;font-variation-settings:"ROND" 22;font-weight:700;letter-spacing:-0.04em;line-height:1.0;padding:20px 0 8px}
 .msg--heading{color:var(--text-display);font-weight:700;text-transform:uppercase;font-size:9px;letter-spacing:0.12em;padding-top:10px}
 .msg--log{color:var(--text-disabled);font-size:11px;padding-left:16px;border-left:1px solid var(--border-visible);margin-left:4px}
 .msg--narrative{color:var(--text-primary);font-family:var(--font-body);font-size:14px;line-height:1.7;padding:6px 0;letter-spacing:0.01em}
@@ -122,7 +122,7 @@ body{height:100%;background:var(--black);font-family:var(--font-mono);font-size:
 
 /* Hero stat */
 .hstat{display:flex;flex-direction:column;gap:2px}
-.hstat__num{font-family:var(--font-display);font-size:36px;font-variation-settings:'ROND' 16;font-weight:600;color:var(--text-display);letter-spacing:-0.03em;line-height:1}
+.hstat__num{font-family:var(--font-display);font-size:36px;font-variation-settings:"ROND" 16;font-weight:600;color:var(--text-display);letter-spacing:-0.03em;line-height:1}
 .hstat__unit{font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-disabled)}
 .hstat__pair{display:flex;gap:32px;flex-wrap:wrap}
 
@@ -202,7 +202,7 @@ body{height:100%;background:var(--black);font-family:var(--font-mono);font-size:
 .seg__blk--fill{animation:segPop 100ms var(--ease-mech) backwards}
 @keyframes segPop{from{transform:scaleY(0)}to{transform:scaleY(1)}}
 .seg__readout{display:flex;align-items:baseline;justify-content:space-between;margin-top:4px}
-.seg__val{font-family:var(--font-display);font-variation-settings:'ROND' 14;font-weight:600;color:var(--text-display);letter-spacing:-0.03em;line-height:1}
+.seg__val{font-family:var(--font-display);font-variation-settings:"ROND" 14;font-weight:600;color:var(--text-display);letter-spacing:-0.03em;line-height:1}
 .seg--hero .seg__val{font-size:24px}
 .seg--std .seg__val{font-size:16px}
 .seg--compact .seg__val{font-family:var(--font-mono);font-size:10px;font-variation-settings:normal;font-weight:400;letter-spacing:0;color:var(--text-secondary)}
@@ -241,7 +241,7 @@ body{height:100%;background:var(--black);font-family:var(--font-mono);font-size:
 /* ═══════════ SPARKLINE ═══════════ */
 .spark{display:flex;align-items:center;gap:12px}
 .spark__label{font-family:var(--font-mono);font-size:8px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-disabled);white-space:nowrap}
-.spark__val{font-family:var(--font-display);font-size:20px;font-variation-settings:'ROND' 12;font-weight:600;color:var(--text-display);letter-spacing:-0.03em;line-height:1}
+.spark__val{font-family:var(--font-display);font-size:20px;font-variation-settings:"ROND" 12;font-weight:600;color:var(--text-display);letter-spacing:-0.03em;line-height:1}
 
 /* ═══════════ THINKING ═══════════ */
 .thinking{font-family:var(--font-mono);font-size:10px;color:var(--text-disabled);display:flex;align-items:center;gap:5px;padding:3px 0;animation:msgIn 100ms var(--ease-out)}
@@ -613,6 +613,7 @@ body{height:100%;background:var(--black);font-family:var(--font-mono);font-size:
   let tasks = [];
   let taskIdCounter = 0;
   let quests = [];
+  let chatWs = null;  // WebSocket for /chat/ws endpoint
   let sessions = [];
   let branches = [];
   let currentCharacter = null;
@@ -906,11 +907,11 @@ body{height:100%;background:var(--black);font-family:var(--font-mono);font-size:
             return '<div class="rel-card">' +
               '<div class="rel-card__names">' + currentCharacter + ' \u21CC ' + (r.partner || '?') + '</div>' +
               '<div class="rel-card__status">' + (r.status || 'unknown') + ' \u00B7 ' + pct + '% affection</div>' +
-              '<div class="seg seg--compact" style="margin-top:4px"><div class="seg__track" id="relSeg_' + (r.partner || 'x').replace(/\s/g,'_') + '"></div></div></div>';
+              '<div class="seg seg--compact" style="margin-top:4px"><div class="seg__track" id="relSeg_' + (r.partner || 'x').replace(new RegExp('\\\\s','g'),'_') + '"></div></div></div>';
           }).join('');
           // Render seg bars after DOM update
           rels.slice(0, 5).forEach(function(r) {
-            var el = document.getElementById('relSeg_' + (r.partner || 'x').replace(/\s/g, '_'));
+            var el = document.getElementById('relSeg_' + (r.partner || 'x').replace(new RegExp('\\\\s','g'), '_'));
             if (el) renderSeg(el, (r.affection || 0) * 100, (r.affection || 0) > 0.7 ? 'var(--success)' : 'var(--warning)', 16);
           });
         }).catch(function() { cRelList.innerHTML = '<div style="font-size:10px;color:var(--text-disabled)">Unavailable</div>'; });
@@ -1174,7 +1175,7 @@ body{height:100%;background:var(--black);font-family:var(--font-mono);font-size:
       var color = chance > 0.6 ? 'var(--success)' : chance > 0.3 ? 'var(--warning)' : 'var(--accent)';
       var html = '<div class="iblock"><div class="iblock__label">Success Probability</div>' +
         '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px">' +
-        '<span style="font-family:var(--font-display);font-size:48px;font-variation-settings:\'ROND\' 18;font-weight:600;color:' + color + ';letter-spacing:-0.03em;line-height:1">' + Math.round(chance * 100) + '</span>' +
+        '<span style="font-family:var(--font-display);font-size:48px;font-variation-settings:&quot;ROND&quot; 18;font-weight:600;color:' + color + ';letter-spacing:-0.03em;line-height:1">' + Math.round(chance * 100) + '</span>' +
         '<span style="font-family:var(--font-mono);font-size:12px;color:var(--text-disabled)">%</span></div>' +
         '<div class="seg seg--hero"><div class="seg__track" id="probSeg"></div></div></div>';
       addHTML(html);
@@ -1399,7 +1400,24 @@ body{height:100%;background:var(--black);font-family:var(--font-mono);font-size:
         default: addMsg('Unknown command: ' + cmd + '. Type /help.', 'msg--error');
       }
     } else {
-      await cmdSearch(trimmed, true);
+      // Non-slash messages go to /chat/message for roleplay, not search
+      try {
+        var resp = await apiFetch('/chat/message', {
+          method: 'POST',
+          body: JSON.stringify({ content: trimmed })
+        });
+        if (resp && resp.narrative) {
+          addMsg(resp.narrative, 'msg--narrative');
+          if (resp.location) addEvent('system', 'Location: ' + resp.location);
+        } else if (resp && resp.error) {
+          addMsg('[Error] ' + resp.error, 'msg--error');
+          // Fall back to search on error
+          await cmdSearch(trimmed, true);
+        }
+      } catch (e) {
+        // Fall back to search if chat endpoint unavailable
+        await cmdSearch(trimmed, true);
+      }
     }
     addMsg('', '');
   }
@@ -1410,7 +1428,35 @@ body{height:100%;background:var(--black);font-family:var(--font-mono);font-size:
   inputEl.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
       var val = inputEl.value;
-      if (val) { commandHistory.push(val); if (commandHistory.length > 50) commandHistory.shift(); historyIndex = commandHistory.length; processInput(val); inputEl.value = ''; }
+      if (val) {
+        commandHistory.push(val);
+        if (commandHistory.length > 50) commandHistory.shift();
+        historyIndex = commandHistory.length;
+        // Route to /chat endpoints - WebSocket first, then REST fallback
+        if (chatWs && chatWs.readyState === WebSocket.OPEN) {
+          chatWs.send(JSON.stringify({ type: 'message', content: val }));
+        } else if (val.startsWith('/')) {
+          // Slash commands go to processInput for local handling
+          processInput(val);
+        } else {
+          // Non-command text: send to /chat/message REST endpoint
+          apiFetch('/chat/message', {
+            method: 'POST',
+            body: JSON.stringify({ content: val })
+          }).then(function(resp) {
+            if (resp && resp.narrative) {
+              addMsg(resp.narrative, 'msg--narrative');
+              if (resp.location) addEvent('system', 'Location: ' + resp.location);
+            } else if (resp && resp.error) {
+              addMsg('[Error] ' + resp.error, 'msg--error');
+            }
+          }).catch(function(err) {
+            // Fall back to search if chat fails
+            cmdSearch(val, true);
+          });
+        }
+        inputEl.value = '';
+      }
       e.preventDefault();
     } else if (e.key === 'ArrowUp') {
       if (historyIndex > 0) { historyIndex--; inputEl.value = commandHistory[historyIndex] || ''; } e.preventDefault();
@@ -1512,13 +1558,18 @@ body{height:100%;background:var(--black);font-family:var(--font-mono);font-size:
     try {
       var response = await fetch('/api/launch', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hints: hints, isekai: isekaiMode, starting_age: startingAge, open_browser: true })
+        body: JSON.stringify({ hints: hints, isekai: isekaiMode, starting_age: startingAge, open_browser: false })
       });
       var data = await response.json();
       removeThinking();
       if (data.status === 'success') {
         addMsg('[OK] New game created', 'msg--success');
+        addMsg('[SYS] Starting session: ' + data.character_name, 'msg--success');
         addEvent('system', 'New game launched');
+        // Navigate to the session URL to enable roleplay mode
+        if (data.url) {
+          window.location.href = data.url;
+        }
       } else { addMsg('[ERR] ' + (data.error || 'Unknown error'), 'msg--error'); }
     } catch (e) { removeThinking(); addMsg('[ERR] ' + e.message, 'msg--error'); }
   });
@@ -1532,29 +1583,67 @@ body{height:100%;background:var(--black);font-family:var(--font-mono);font-size:
   });
 
   // ═══════════════════════════════════════
-  //  ROLEPLAY WEBSOCKET
+  //  CHAT WEBSOCKET (primary for roleplay)
   // ═══════════════════════════════════════
   var urlParams = new URLSearchParams(window.location.search);
   var sessionId = urlParams.get('session');
   var initialCharacter = urlParams.get('character');
-  var roleplayWs = null;
-  if (sessionId && initialCharacter) {
-    var wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    roleplayWs = new WebSocket(wsProtocol + '//' + window.location.host + '/ws/roleplay/' + sessionId + '?character=' + encodeURIComponent(initialCharacter));
-    roleplayWs.onopen = function() { addMsg('[SYS] Connected as ' + initialCharacter, 'msg--success'); addEvent('system', 'RP connected: ' + initialCharacter); };
-    roleplayWs.onmessage = function(event) {
-      try {
-        var data = JSON.parse(event.data);
-        if (data.type === 'narrative') { addMsg(data.content, 'msg--narrative'); addEvent('system', 'Narrative update'); }
-        else if (data.type === 'status') { if (sidebarOpen) refreshAllPanels(); }
-        else if (data.type === 'probability_update') {
-          probabilityHistory.push(data.probability);
-          if (probabilityHistory.length > 20) probabilityHistory.shift();
-          if (sidebarOpen) refreshCharPanel();
-        }
-      } catch (e) {}
-    };
-    roleplayWs.onclose = function() { addMsg('[SYS] Disconnected from session', 'msg--warn'); addEvent('system', 'RP disconnected'); };
+
+  // Initialize chat session via REST first, then connect WebSocket
+  if (initialCharacter) {
+    // Setup session via /chat/setup
+    apiFetch('/chat/setup', {
+      method: 'POST',
+      body: JSON.stringify({
+        character: initialCharacter,
+        location: 'unknown',
+        role: 'protagonist',
+        session_id: sessionId || 'session_' + Date.now()
+      })
+    }).then(function(sessionInfo) {
+      // Now connect to WebSocket for real-time messaging
+      var wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      chatWs = new WebSocket(wsProtocol + '//' + window.location.host + '/chat/ws');
+
+      chatWs.onopen = function() {
+        addMsg('[SYS] Connected to chat session', 'msg--success');
+        addEvent('system', 'Chat connected: ' + initialCharacter);
+        // Send setup message via WebSocket to sync state
+        chatWs.send(JSON.stringify({
+          type: 'setup',
+          character: initialCharacter,
+          location: sessionInfo.current_location || 'unknown',
+          story_time: sessionInfo.current_time,
+          role: 'protagonist',
+          session_id: sessionInfo.session_id
+        }));
+      };
+
+      chatWs.onmessage = function(event) {
+        console.log('[CHAT WS] Received:', event.data);
+        try {
+          var data = JSON.parse(event.data);
+          if (data.type === 'narrative') {
+            addMsg(data.narrative, 'msg--narrative');
+            addEvent('system', 'Narrative update');
+          }
+          else if (data.type === 'session') {
+            // Session confirmed
+            addMsg('[SYS] Session active: ' + (data.active_character || initialCharacter), 'msg--dim');
+          }
+          else if (data.type === 'error') { addMsg('[WS ERROR] ' + data.detail, 'msg--error'); }
+          else if (data.type === 'status') { if (sidebarOpen) refreshAllPanels(); }
+          else if (data.type === 'pong') { /* keepalive response */ }
+          else { console.log('[CHAT WS] Unknown message type:', data.type); }
+        } catch (e) { console.error('[CHAT WS] Parse error:', e); }
+      };
+
+      chatWs.onerror = function(e) { console.error('[CHAT WS] Error:', e); };
+      chatWs.onclose = function() { addMsg('[SYS] Disconnected from chat', 'msg--warn'); addEvent('system', 'Chat disconnected'); };
+    }).catch(function(err) {
+      console.error('[CHAT] Session setup failed:', err);
+      addMsg('[SYS] Chat session setup failed, using REST fallback', 'msg--warn');
+    });
   }
 
   // ═══════════════════════════════════════

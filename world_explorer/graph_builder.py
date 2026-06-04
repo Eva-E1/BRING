@@ -13,9 +13,9 @@ def build_graph(entities: List[Entity], name_index: NameIndex) -> nx.DiGraph:
         G.add_node(e.uid, label=e.name, type=e.entity_type, group=e.group_id, missing=False)
         valid_uids.add(e.uid)
 
-    # 2. Closure to resolve using NameIndex with valid_uids
+    # 2. Closure to resolve using NameIndex (valid_uids managed internally)
     def resolve(name: str) -> str or None:
-        return name_index.resolve(name, valid_uids)
+        return name_index.resolve(name)
 
     # 3. Explicit L1 relationships
     for e in entities:

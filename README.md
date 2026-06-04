@@ -1,9 +1,9 @@
-# 🌟 BRING – Building Rich Interactive Narrative Games
+# 🌟 BRING v2 – Building Rich Interactive Narrative Games
 
-**BRING** is a modular, AI‑powered platform for building, exploring, and **living** in persistent fantasy worlds.  
-It combines generative world construction, graph‑based knowledge management, intelligent narrative orchestration, and immersive roleplay – all driven by large language models (LLMs).
+**BRING v2** is a **production‑ready**, AI‑powered platform for building, exploring, and **living** in persistent fantasy worlds.  
+It combines generative world construction, graph‑based knowledge management, deterministic probability systems, intelligent narrative orchestration, and immersive roleplay – all driven by large language models (LLMs) and FAISS‑accelerated memory.
 
-> *“From a single prompt to a living, breathing world – where every NPC remembers, every rule matters, and the story never stops.”*
+> *“From a single prompt to a living, breathing world – where every NPC remembers, every action has a chance, and the story never stops.”*
 
 ---
 
@@ -11,64 +11,67 @@ It combines generative world construction, graph‑based knowledge management, i
 
 | Feature | Description |
 |---------|-------------|
-| 🏗️ **Layered World Building** | Every entity (character, location, item, faction, event, rule) has three layers: **L1** (classification), **L2** (detailed description), **L3** (secrets). Generate them incrementally, resume anytime. |
-| 🕸️ **Graph‑First Knowledge** | All relationships are stored in a directed graph. Traverse, visualise, and validate connections. Self‑healing graph repairs broken links automatically. |
-| 🧠 **Intelligent Enrichment** | Social network analysis, missing relationship recommendations, rule violation detection & auto‑fix, duplicate merging, subgraph expansion – all powered by embeddings and graph algorithms. |
+| 🏗️ **Layered World Building** | Every entity (character, location, item, faction, event, rule) has three layers: **L1** (classification), **L2** (detailed description), **L3** (secrets). Generate incrementally, resume anytime. |
+| 🕸️ **Graph‑First Knowledge** | All relationships stored in a directed graph. Traverse, visualise, and validate connections. **Self‑healing graph** repairs broken links automatically. |
+| 🧠 **Self‑Optimising Memory** | FAISS‑accelerated vector memory for NPCs **and** world events. Background consolidation, pruning, clustering, and time‑based partitioning. |
+| 🎲 **Probability System** | Deterministic outcomes for combat, persuasion, stealth, romance, investigation, etc. Dynamic parameters (skill, health, mood, environment, luck) with temporary modifiers. No more arbitrary LLM decisions. |
+| 💖 **Romance System** | Full romantic relationship management – affection, compatibility, status (crush/dating/engaged/married). Probability‑driven actions: flirt, confess, date, kiss, propose, breakup. |
+| 🌱 **Advanced Birth / Isekai** | Probability‑based race, social class, magic affinity, innate talents. Full three‑generation family tree, heirlooms, family secrets. Optional **reincarnation mode** with cheat ability and past‑life memories. |
 | 🎭 **Living Narrative Director** | Background agent advances story arcs, villain agendas, NPC interactions, chance events, and scheduled story beats – even when you’re not playing. |
-| 💬 **Immersive Roleplay** | Third‑person narrative, NPC dialogue, scene transitions. The LLM **never** speaks or acts for your character. Supports natural language actions, movement, and slash commands. |
-| 🧠 **NPC Memory** | Each NPC has episodic (short‑term & long‑term) and semantic memory, with background consolidation and embedding‑based retrieval. NPCs remember past interactions, form relationships, and evolve. |
+| 💬 **Immersive Roleplay** | Third‑person narrative, NPC dialogue, scene transitions. The LLM **never** speaks or acts for your character. Natural language actions, movement, and slash commands. |
 | 📜 **Quest & Social System** | Dynamic quest generation, objective tracking, social simulation between NPCs (alliances, betrayals, arguments). |
 | 🌿 **World Evolution** | The Director periodically adds new NPCs, locations, and items based on story progression. The world grows organically. |
 | 🌿 **Branching Storylines** | Create alternate branches without touching the main graph – merge them back when ready. |
-| 🔌 **Unified CLI & API** | All functionality exposed via rich command‑line interfaces (`typer` + `rich`) and a FastAPI web API for the explorer. |
+| 🧠 **Pain Signals** | The system learns from failures – pain keywords trigger warnings, helping the narrative avoid repeating mistakes. |
+| 🔌 **Unified CLI & Web UI** | One command (`world newgame`) launches the full experience. Beautiful terminal‑style web interface with real‑time memory, romance, and probability dashboards. |
+| 🛠️ **One‑Command New Game** | `world newgame --hints "noble mage half-elf" --isekai` creates a complete world, a unique character with family tree, and starts the web UI. |
 
 ---
 
-## 🧱 Architecture Overview
+## 🧱 Architecture Overview (v2)
 
 ```
-User (CLI / API)
+User (CLI / Web UI)
     │
     ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                     world_narrative.cli                      │
-│  (play, tick, timeline, director commands, newborn start)   │
+│                      world_cli.py (unified)                 │
+│   Routes to builder, explorer, intelligence, narrative,     │
+│   and new commands: newgame, continue, serve                │
 └─────────────────────────────┬───────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                      RoleplayEngine                          │
-│  (narrator / NPC / scene agents, memory, start resolver)    │
+│  (narrator / NPC / scene agents, probability system,        │
+│   romance engine, memory, start resolver)                   │
 └──────────────┬──────────────────────────────┬───────────────┘
                │                              │
                ▼                              ▼
 ┌──────────────────────────┐    ┌────────────────────────────┐
 │      StoryEngine         │    │        Director            │
 │  (event generation,      │    │ (villains, story planner,  │
-│   effect application)    │    │  NPC simulator, tick loop) │
-└──────────────┬───────────┘    └──────────────┬─────────────┘
+│   effect application,    │    │  NPC simulator, tick loop) │
+│   probability actions)   │    └──────────────┬─────────────┘
+└──────────────┬───────────┘                   │
                │                               │
                ▼                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                  OptimizedMemoryStore                        │
-│  (episodic + semantic memory for NPCs, embeddings,          │
-│   background consolidation)                                 │
+│                 Unified EntityStore + GraphStore            │
+│   O(1) name index, batch saves, mutation callbacks.        │
+│   Lazy graph rebuild, branch manager.                      │
 └─────────────────────────────┬───────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                      GraphManager + GraphStore               │
-│   (entities.json, graph engine, NameIndex, branch manager)  │
-└─────────────────────────────┬───────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                        world_builder                         │
-│   (WorldBuilder, WorldGenerator, LLMClient, prompts)        │
+│                     WorldMemory (FAISS)                     │
+│   Partitioned storage, embedding queue, write‑behind,      │
+│   cognitive pipeline (entity extraction, contradiction,    │
+│   pain signals), background optimizer.                     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-All modules share a common database directory (`world_db/`) – everything is persistent.
+All modules share `world_db/` – everything is persistent, atomic, and crash‑safe.
 
 ---
 
@@ -77,65 +80,102 @@ All modules share a common database directory (`world_db/`) – everything is pe
 ### 1. Install & Configure
 
 ```bash
-git clone https://github.com/your-org/bring.git
-cd bring
+git clone https://github.com/Eva.E1/BRING.git
+cd BRING
 
-# Install dependencies (example – adjust per your environment)
-pip install -r world_builder/requirements.txt \
-            -r world_explorer/requirements.txt \
-            -r world_intelligence/requirements.txt
+# Install dependencies
+pip install -r requirements.txt
+
+# For FAISS (highly recommended)
+pip install faiss-cpu   # or faiss-gpu if you have CUDA
 ```
 
-Create a `.env` file:
+Create a `.env` file (or copy the template):
 
 ```ini
-LLM_API_KEY=your_openai_api_key
-LLM_BASE_URL=https://api.openai.com/v1
-LLM_MODEL=gpt-4o-mini
+cp .env.example .env
 ```
 
-Optional for semantic search (uses local BGE‑M3 or any OpenAI‑compatible embeddings API):
+Edit `.env`:
 
 ```ini
-EMBEDDING_BASE_URL=http://localhost:8043/v1
-EMBEDDING_MODEL_NAME=bge-m3
+# LLM (OpenAI or compatible)
+WORLD_LLM_BASE_URL=https://api.openai.com/v1
+WORLD_LLM_API_KEY=your_openai_api_key
+WORLD_LLM_MODEL=gpt-4o-mini
+
+# Optional: Local embeddings (e.g., BGE‑M3 via LiteLLM or local server)
+WORLD_EMBEDDING_BASE_URL=http://localhost:8043/v1
+WORLD_EMBEDDING_MODEL=bge-m3
+
+# Database location
+WORLD_DB_PATH=./world_db
 ```
 
-### 2. Build Your First World
+### 2. Build Your First World (or jump straight to a new game)
 
 ```bash
+# Classic: build world, layers, relationships
 python -m world_builder.cli build --episodes 3 --relationships
+
+# Or start a new game immediately (birth wizard + web UI)
+python world_cli.py newgame --hints "a young elven ranger" --isekai
 ```
 
-This generates a complete world frame, expands L2/L3 for all entities, infers relationships, and writes three narrative scenes.
+The `newgame` command:
+- Checks system (LLM, FAISS, disk space)
+- Prepares world (creates frame if missing)
+- Runs the advanced **birth wizard** (probability rolls for race, class, magic, talents)
+- Generates a full family tree, heirloom, and family secret
+- Schedules childhood milestones (first word, first step, magic awakening)
+- Launches the **web UI** at `http://localhost:8000`
 
-### 3. Explore the World
+### 3. Explore Your World
 
 ```bash
-# Summary
+# CLI summary
 python -m world_builder.cli view summary
 
 # List all characters
 python -m world_builder.cli view characters
 
-# Detailed view of an entity
-python -m world_builder.cli view entity "Kaelen"
+# Detailed entity view
+python -m world_builder.cli view entity "Kaelen" --level 2
+
+# Semantic search
+python -m world_explorer.cli search "ancient prophecy" --semantic
 ```
 
-### 4. Play a Roleplay Session
+### 4. Play a Roleplay Session (CLI)
 
 ```bash
-python -m world_narrative.cli play --character Kaelen --location "Silverwood"
+python -m world_narrative.cli play --character Kaelen --location Silverwood
 ```
 
 Inside the session:
 
-- Describe your action: `I search the old chest for clues.`
-- Talk to NPCs: `talk to Elara "What do you know about the ruins?"`
-- Move: `go to Riverfall`
-- Slash commands: `/look`, `/inventory`, `/status`, `/quests`, `/time`, `/save`, `/quit`
+- **Natural language**: `I search the old chest for clues.`
+- **Talk to NPCs**: `talk to Elara "What do you know about the ruins?"`
+- **Move**: `go to Riverfall`
+- **Probability actions**: `/attack Goblin`, `/persuade Elara "We should help"`, `/stealth`
+- **Romance**: `/romance Kaelen Elara` (shows status), `/romance-attempt confess --character Kaelen --target Elara`
+- **Slash commands**: `/look`, `/inventory`, `/status`, `/quests`, `/time`, `/save`, `/quit`
 
-The **Director** works in the background – advancing villains, generating chance events, and evolving the world.
+The **Director** runs in the background – villains advance, chance events occur, story beats trigger.
+
+### 5. Launch the Web UI (if not already open)
+
+```bash
+python world_cli.py serve --port 8000
+```
+
+Then open `http://localhost:8000`.  
+The UI provides a **terminal‑style** interface with:
+- Real‑time memory event feed
+- Character and romance dashboards
+- Quest tracking
+- Probability sparkline
+- Full command palette (`Ctrl+K`)
 
 ---
 
@@ -151,26 +191,31 @@ The **Director** works in the background – advancing villains, generating chan
 | `add npc <faction/race>` | Add a new NPC on the fly. | `add npc "Order of the Echo"` |
 | `add item <type> [--rarity]` | Add a new item. | `add item weapon --rarity rare` |
 | `view entity <name> [--level]` | Show layered data. | `view entity "Kaelen" --level 2` |
-| `search <query>` | Text search across entities. | `search "dragon"` |
 | `validate` | Check relationship consistency. | `validate` |
+| `repair [--intelligent] [--merge] [--create]` | Fix broken relationships (fuzzy matching + auto‑create). | `repair --merge --create` |
 
-**Key feature:** Resumable layer expansion. If the LLM fails or you interrupt, running `build` again will skip already‑completed layers.
+**Key improvement (v2):** Batch saves and lazy graph rebuild drastically reduce I/O.
+
+---
 
 ### 2. 🔍 World Explorer (`world_explorer`)
 
-**Purpose:** Navigate the graph, visualise, and manage branches.
+**Purpose:** Navigate the graph, visualise, manage branches, and now includes the **full web UI**.
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `show <uid> [--layer l1] [--complete]` | Display entity data. | `show "Character:Kaelen" --layer l2` |
+| `show <uid> [--layer l1] [--complete]` | Display entity data (auto‑complete missing layers). | `show "Character:Kaelen" --layer l2` |
 | `neighbors <uid> --depth 2` | Show connected nodes. | `neighbors "Character:Kaelen" --depth 2` |
 | `path <source> <target>` | Shortest path between entities. | `path "Kaelen" "Silverwood"` |
-| `search --semantic <query>` | Embedding‑based search. | `search --semantic "ancient magic sword"` |
+| `search --semantic <query>` | FAISS‑accelerated semantic search. | `search --semantic "ancient magic sword"` |
 | `branch create/switch/merge` | Manage story branches. | `branch create "what-if-kaelen-dies"` |
-| `visualize` | Export interactive HTML graph (`pyvis`). | `visualize --output world.html` |
-| `build [l1/l2/l3/all]` | Generate missing layers via builder. | `build l2` |
+| `visualize` | Export interactive HTML graph. | `visualize --output world.html` |
+| `layer [l1/l2/l3/all]` | Generate missing layers via builder. | `layer l2` |
+| `serve` | Start the FastAPI web server (used by `world_cli.py serve`). | `serve --port 8000` |
 
-**Self‑healing graph:** On boot, the validator automatically repairs broken references, adds placeholder nodes for missing targets, and merges duplicates.
+**New in v2:** The web UI is now the primary interface for `newgame`. It includes real‑time WebSocket feeds for memory and roleplay.
+
+---
 
 ### 3. 🧠 World Intelligence (`world_intelligence`)
 
@@ -181,139 +226,151 @@ The **Director** works in the background – advancing villains, generating chan
 | `analyze` | Centrality, communities, path stats. | `analyze` |
 | `recommend` | Suggest missing relationships & new entities. | `recommend` |
 | `generate-scene <uid>` | Create narrative scene from a graph cluster. | `generate-scene "Character:Kaelen"` |
-| `check-rules [--fix]` | Validate all entities against world rules. | `check-rules --fix` |
+| `check-rules [--fix]` | Validate all entities against world rules (LLM). | `check-rules --fix` |
 | `expand <uid> [--depth] [--fix-rules]` | Enrich subgraph (complete layers, check rules, generate scene). | `expand "Location:Silverwood" --depth 2` |
 | `enrich [--fix-rules]` | **Full pipeline** – layers, relationships, rules, recommendations, duplicates. | `enrich --fix-rules` |
-| `deduplicate [--dry-run]` | Merge duplicate entities via embeddings. | `deduplicate` |
+| `deduplicate [--dry-run]` | FAISS‑accelerated duplicate merging. | `deduplicate` |
 
-**Rule checking:** Uses LLM to check each entity's L2/L3 against world rules (e.g., “No magic in the capital”). Can auto‑fix violations.
+**v2 performance:** All duplicate detection and relationship repair now use FAISS and tries, making them O(log n) instead of O(n²).
+
+---
 
 ### 4. 📖 World Narrative (`world_narrative`)
 
-**Purpose:** Run the living story – director, roleplay, memory, quests.
+**Purpose:** Run the living story – director, roleplay, probability, romance, memory, quests.
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `play` | Start interactive roleplay session. | `play --character Kaelen --session mygame` |
+| `newgame` | **One‑command launch** – birth wizard + web UI. | `world newgame --hints "noble mage" --isekai` |
+| `continue` | Resume existing game from snapshot or session. | `world continue --session-id mygame` |
+| `play` | Start CLI roleplay session. | `play --character Kaelen --session mygame` |
 | `tick <ISO_time>` | Manually advance story and generate event. | `tick 2025-01-01T12:00:00` |
 | `timeline [--since] [--group]` | Show event log. | `timeline --since 2025-01-01` |
 | `schedule <callback> <minutes> <data>` | Schedule future event. | `schedule villain_event 30 '{"villain":"The Shadow"}'` |
-| `npc-status <name>` | Show NPC memory and state. | `npc-status Elara` |
+| `npc-status <name>` | Show NPC memory, health, mood, goals, inventory. | `npc-status Elara` |
 | `director-status` | Show villain progress, story plan. | `director-status` |
-| `newborn-play <character>` | Reset character to newborn (no memories/relationships). | `newborn-play "Kaelen"` |
+| `birth` | Advanced character creator (family tree, isekai). | `birth --hints "half-elf druid" --isekai` |
+| `romance-status/attempt/list/gift` | Manage romantic relationships. | `romance-attempt confess --character Kaelen --target Elara` |
+| `prob show/list/modify/skills` | Probability system introspection. | `prob show combat --character Kaelen --target Goblin` |
+| `memory-maintenance/status/forget/summarise/export/import` | Advanced memory management. | `memory-maintenance --full` |
 
 **Director background loop:** Wakes every 60 real seconds, advances story time by 30 minutes, processes NPC interactions, villain ticks, chance events, and scheduled story beats.
 
-### 5. ⚙️ World Engine (`world_engine`)
+---
 
-**Purpose:** Low‑level roleplay agents and session logic. Not directly called from CLI – used internally by `world_narrative.cli play`.
+### 5. 🎲 Probability System (`world_core/probability`)
 
-Components:
-- `NarratorAgent` – describes environment, NPC actions, consequences.
-- `NPCAgent` – generates dialogue in character.
-- `SceneAgent` – handles travel descriptions.
-- `DirectorAgent` – injects story beats into ongoing narrative.
-- `StartResolver` – parses natural language starting points (“as Kaelen in Silverwood at dawn”).
+Now integrated into `RoleplayEngine` and `StoryEngine`. Used for:
 
-### 6. 🧭 World Director (`world_director`)
+- **Combat** – `/attack`
+- **Persuasion** – `/persuade`
+- **Stealth** – `/stealth`
+- **Intimidation** – `/intimidate`
+- **Deception** – `/deception`
+- **Romance** – all romance actions
+- **Birth** – race, social class, magic affinity, talents
+- **Quest objectives** – chance‑based objectives
 
-**Purpose:** Background automation – task queue, story arcs, world evolution.
+**Profiles:** combat, persuasion, stealth, romance, investigation, athletics, deception, intimidation, generic, birth_race, birth_social_class, birth_magic_affinity, birth_talent.
 
-Not exposed directly; used by `world_narrative.Director`.
+**Modifiers:** temporary bonuses/penalties via `/prob modify`.
 
-Features:
-- `AgentCoordinator` – priority queue for LLM tasks (user = HIGH, background = LOW).
-- `StoryArcManager` – tracks multi‑phase arcs for characters/factions.
-- `WorldEvolver` – periodically adds new NPCs, locations, items (10‑20% chance per tick).
-- `NewbornScenario` – wipes a character’s memory and graph edges.
+---
 
-### 7. 🔌 World Core (`world_core`)
+### 6. 💖 Romance System (`world_core/romance`)
 
-**Purpose:** Global LLM queue with priority handling. Used by all modules to prevent API overloading.
+Automatically tracks relationships between characters. CLI commands:
+
+- `romance-status --character Kaelen --target Elara`
+- `romance-attempt confess --character Kaelen --target Elara --location "Moonlight Garden"`
+- `romance-list --status dating`
+- `romance-gift --character Kaelen --target Elara --gift "Silver Necklace"`
+
+**Integration:** Romance events are logged to the chronicler and can trigger director story arcs.
+
+---
+
+### 7. 🚀 Professional Launcher (`world_narrative/launcher.py`)
+
+Used internally by `newgame` and `continue`. Features:
+
+- **System check** – verifies LLM, FAISS, disk space.
+- **World preparation** – creates world frame if missing.
+- **Memory health check** – runs consolidation before start.
+- **Birth wizard** – probability rolls + LLM generation.
+- **Post‑birth tasks** – repairs relationships, schedules childhood milestones, adds welcome quest.
+- **Snapshot save/load** – instantly resume games.
+
+---
+
+### 8. 🔌 World Core (`world_core`)
+
+New components:
+
+- `UnifiedEntityStore` – O(1) name resolution, batch saves, mutation callbacks.
+- `EventBus` – decoupled publish/subscribe for all modules.
+- `WorldMemory` – FAISS‑based, partitioned, self‑optimising.
+- `ProbabilityEngine` – deterministic rolls with modifiers.
+- `RomanceEngine` – relationship management.
 
 ---
 
 ## 🎮 Roleplay Session – In‑Depth Example
 
-Start a session as Kaelen in Silverwood:
+Start a new game with web UI:
 
 ```bash
-python -m world_narrative.cli play --character Kaelen --location Silverwood --session myadventure
+python world_cli.py newgame --hints "a young elven ranger named Kaelen" --isekai
 ```
 
-You see:
+The browser opens with a terminal‑style interface.  
+You see the opening narrative (birth scene), family tree, and a status panel.
+
+Now type actions in the web UI input box:
 
 ```
-World: Eldoria
-Character: Kaelen
-Location: Silverwood
-You control your character. The narrator describes everything else.
-Type /help for commands, /save to persist, /quit to exit.
+> I look around the forest clearing.
 
-You>
-```
-
-Now type actions:
-
-```
-You> I look around the forest clearing.
-
-Narrator: Sunlight filters through the ancient oaks, dappling the mossy ground.
-A small stream babbles nearby. You notice a worn path leading east, and
-a strange symbol carved into a stone.
+[Narrator] Sunlight filters through the ancient oaks, dappling the mossy ground. A small stream babbles nearby. You notice a worn path leading east, and a strange symbol carved into a stone.
 ```
 
 Talk to an NPC:
 
 ```
-You> talk to Elara "Do you know about the symbol on that stone?"
+> talk to Elara "Do you know about the symbol on that stone?"
 
-Elara says: "Ah, that's the mark of the Wardens. They used to guard this forest,
-but they vanished a century ago. Some say a curse drove them out."
+Elara says: "Ah, that's the mark of the Wardens. They used to guard this forest, but they vanished a century ago. Some say a curse drove them out."
 ```
 
-Move:
+Use probability actions:
 
 ```
-You> go east
+> /attack Goblin
 
-Narrator: You follow the path deeper into the woods. The trees grow thicker,
-and the air turns cool. After ten minutes, you reach a ruined tower covered in ivy.
+[Narrator] Kaelen attacks Goblin: success (prob 72%, roll 0.34). The goblin takes 10 damage!
 ```
 
-Use slash commands:
+Check romance status:
 
 ```
-You> /inventory
-You are carrying: a rusty dagger, a waterskin
+> /romance-status --character Kaelen --target Elara
 
-You> /quests
-Active Quests:
-- The Lost Wardens: Find out what happened to the Wardens of Silverwood.
+💖 Kaelen & Elara
+Status: crush
+Affection: 55%
+Compatibility: 68%
+Stage: attraction
 ```
 
-The Director may inject a story beat:
+Attempt a confession:
 
 ```
-Narrator: Suddenly, a twig snaps behind you. You spin around and see a hooded figure
-watching from the shadows. They vanish before you can react.
+> /romance-attempt confess --character Kaelen --target Elara --location "Moonlight Garden"
+
+✅ Confess result: Kaelen confesses his feelings to Elara amazingly. She accepts!
 ```
 
-Save and quit later:
-
-```
-You> /save
-Session saved.
-
-You> /quit
-Goodbye!
-```
-
-To resume:
-
-```bash
-python -m world_narrative.cli play --session myadventure
-```
+The relationship updates to `dating`.
 
 ---
 
@@ -321,108 +378,142 @@ python -m world_narrative.cli play --session myadventure
 
 ### 📌 Branching Storylines
 
-Create an alternate branch for “what if Kaelen died”:
-
 ```bash
-python -m world_explorer.cli branch create what-if-kaelen-dies
-python -m world_explorer.cli branch switch what-if-kaelen-dies
-# Make changes (delete edges, add nodes) – they affect only this branch
-python -m world_explorer.cli branch merge what-if-kaelen-dies   # apply to main
+world branch create what-if-kaelen-dies
+world branch switch what-if-kaelen-dies
+# Make changes (delete edges, add nodes)
+world branch merge what-if-kaelen-dies
 ```
 
-### 📌 Starting Point Resolution
-
-Instead of `--character` and `--location`, you can use a natural language string:
+### 📌 Starting Point Resolution (CLI)
 
 ```bash
-python -m world_narrative.cli play --start "as Kaelen in the Silverwood forest at dawn, just after a storm"
+world narrative play --start "as Kaelen in the Silverwood forest at dawn, just after a storm"
 ```
 
-The `StartResolver` will parse this and set up the session accordingly.
+### 📌 Probability Modifiers
 
-### 📌 Background Director Control
+Give Kaelen a temporary +20% combat boost for 5 minutes:
 
-- `force-chance-event` – trigger a random event immediately.
-- `force-beat` – force a major story beat (cooldown applies).
-- `schedule` – schedule any callback (e.g., `villain_event`, `npc_event`, `quest_event`).
+```bash
+world narrative prob modify Kaelen combat_skill 0.2 --duration 300
+```
+
+### 📌 Memory Maintenance
+
+```bash
+world narrative memory-maintenance --full   # prune, merge, archive
+world narrative memory-status
+world narrative memory-forget 30 --min-importance 0.2
+world narrative memory-summarise --tag "isekai"
+```
 
 ### 📌 Enriching an Existing World
 
-If your world feels sparse, run:
-
 ```bash
-python -m world_intelligence.cli enrich --fix-rules
+world intel enrich --fix-rules
 ```
-
-This will complete all missing L2/L3, generate missing relationships, fix rule violations, and merge duplicates. Your world becomes richer without manual editing.
 
 ### 📌 Visualising the Graph
 
-Generate an interactive HTML graph (requires `pyvis`):
-
 ```bash
-python -m world_explorer.cli visualize --output myworld.html
+world explore visualize --output myworld.html
 # open myworld.html in a browser
 ```
+
+### 📌 Running the API Server Separately
+
+```bash
+world serve --port 8000
+```
+
+The API includes endpoints for:
+- `/api/launch` – create new game
+- `/api/continue` – resume session
+- `/ws/roleplay/{session_id}` – real‑time narrative WebSocket
+- `/ws/memory` – real‑time memory event stream
+- `/api/romance/...` – romance queries
+- `/api/probability/...` – probability queries
+- `/api/maintenance/...` – trigger maintenance
 
 ---
 
 ## 🛠️ Configuration Reference
 
-All settings via environment variables (`.env` file).
+All settings via environment variables (`.env`).
 
 | Category | Variable | Default | Description |
 |----------|----------|---------|-------------|
-| **LLM** | `LLM_API_KEY` | `""` | API key (OpenAI or compatible). |
-| | `LLM_BASE_URL` | `https://api.openai.com/v1` | Endpoint. |
-| | `LLM_MODEL` | `gpt-4o-mini` | Model name. |
-| | `LLM_MAX_RETRIES` | `5` | Retries on failure. |
-| | `LLM_RATE_LIMIT_RPS` | `3.0` | Requests per second. |
-| | `LLM_MAX_CONCURRENT` | `8` | Concurrent LLM calls. |
-| | `LLM_TIMEOUT` | `120.0` | Total request timeout (seconds). |
-| **Embeddings** | `EMBEDDING_BASE_URL` | `http://localhost:8043/v1` | Embedding API. |
-| | `EMBEDDING_MODEL_NAME` | `bge-m3` | Embedding model. |
-| | `EMBEDDING_BATCH_SIZE` | `64` | Batch size for API calls. |
+| **LLM** | `WORLD_LLM_BASE_URL` | `""` | LLM API endpoint (OpenAI‑compatible). |
+| | `WORLD_LLM_API_KEY` | `""` | API key. |
+| | `WORLD_LLM_MODEL` | `gpt-4o-mini` | Model name. |
+| | `WORLD_LLM_MAX_RETRIES` | `3` | Retries on failure. |
+| | `WORLD_LLM_MAX_CONCURRENT` | `8` | Concurrent LLM calls. |
+| | `WORLD_LLM_TIMEOUT` | `120.0` | Total request timeout (seconds). |
+| | `WORLD_LLM_MAX_TOKENS` | `4096` | Max tokens per response. |
+| | `WORLD_LLM_TEMPERATURE` | `0.7` | Sampling temperature. |
+| **Embeddings** | `WORLD_EMBEDDING_BASE_URL` | `""` | Embedding API endpoint. |
+| | `WORLD_EMBEDDING_API_KEY` | `""` | Embedding API key (if separate from LLM). |
+| | `WORLD_EMBEDDING_MODEL` | `text-embedding-3-small` | Embedding model. |
 | **Paths** | `WORLD_DB_PATH` | `./world_db` | Database directory. |
-| **Behaviour** | `AUTO_HEAL` | `True` | Auto‑repair graph on explorer boot. |
-| | `DEAD_REF_TYPE` | `BROKEN` | Edge type for unresolvable references. |
+| **Server** | `WORLD_SERVER_HOST` | `127.0.0.1` | Web server host. |
+| | `WORLD_SERVER_PORT` | `8000` | Web server port. |
+| | `WORLD_SERVER_RELOAD` | `false` | Enable auto‑reload on code changes. |
+| **Behaviour** | `WORLD_AUTO_HEAL` | `true` | Auto‑repair graph on explorer boot. |
+| **Probability** | (modifiers saved in `world_db/probability_modifiers.json`) | |
+| **Romance** | (data stored in `world_db/romance/`) | |
 
 ---
 
 ## 📁 Full Project Tree (Abridged)
 
 ```
-bring/
+BRING/
 ├── world_builder/          # World generation
-│   ├── builder.py          # Main orchestrator
+│   ├── builder.py          # Main orchestrator (batch saves, event bus)
 │   ├── cli.py              # Typer CLI
 │   ├── generator.py        # LLM prompt calls
-│   ├── graph_manager.py    # Unified API over EntityStore + GraphEngine
+│   ├── graph_manager.py    # Unified API over EntityStore
 │   └── ...
-├── world_explorer/         # Graph navigation
-│   ├── cli.py              # Explore, branch, visualise
-│   ├── store.py            # GraphStore boot & caching
+├── world_explorer/         # Graph navigation & web UI
+│   ├── cli.py
+│   ├── store.py            # GraphStore with unified store
 │   ├── navigator.py        # Queries (neighbors, path, search)
-│   ├── branch_manager.py   # Branch overlay
-│   └── ...
-├── world_intelligence/     # Analysis & enrichment
+│   ├── branch_manager.py
+│   ├── api.py              # FastAPI (serves UI + REST + WebSocket)
+│   ├── templates.py        # Inline HTML/JS UI
+│   └── routes/             # Modular API routes
+├── world_intelligence/     # Analysis & enrichment (FAISS accelerated)
 │   ├── cli.py
 │   ├── graph_analyzer.py
 │   ├── recommender.py
 │   ├── rule_checker.py
-│   ├── duplicate_detector.py
+│   ├── duplicate_detector.py (FAISS)
+│   ├── relationship_repairer.py (Trie + fuzzy)
 │   └── pipeline.py
 ├── world_narrative/        # Story & roleplay
-│   ├── cli.py
-│   ├── context.py          # Dependency injection
+│   ├── cli.py (includes newgame, continue, romance, prob)
+│   ├── context.py          # Dependency injection (memory, probability, romance)
 │   ├── story_engine.py
 │   ├── director.py         # Unified background director
-│   ├── memory_optimized.py # NPC memory with embeddings
-│   ├── user_agent.py       # Session handling
+│   ├── memory_optimized.py # NPC memory
+│   ├── birth.py            # Advanced character creation (family tree, isekai)
+│   ├── launcher.py         # Professional game launcher
 │   └── ...
-├── world_engine/           # Roleplay agents
+├── world_engine/           # Roleplay agents (probability actions)
 ├── world_director/         # Task queue, arcs, evolution
-├── world_core/             # LLM queue
+├── world_core/             # Shared infrastructure
+│   ├── models.py           # LayeredProfile, EntityNode, WorldFrame
+│   ├── store.py            # UnifiedEntityStore (O(1) lookups)
+│   ├── event_bus.py        # Async pub/sub
+│   ├── history_manager.py  # Persistent session turns
+│   ├── probability/        # Probability engine & profiles
+│   ├── romance/            # Romance engine & models
+│   └── memory/             # FAISS‑based self‑optimising memory
+│       ├── world_memory.py
+│       ├── optimizer.py
+│       ├── partition.py
+│       └── ...
 └── world_db/               # Persistent data (auto‑created)
 ```
 
@@ -438,7 +529,30 @@ We welcome contributions! Please:
 4. Run `black` and `isort` (if configured).
 5. Submit a pull request.
 
+**Development setup:**
 
+```bash
+git clone https://github.com/Eva.E1/BRING.git
+cd BRING
+pip install -r requirements.txt
+pip install faiss-cpu
+cp .env.example .env
+```
 
-**Enjoy building and living in your worlds with BRING!**  
+**Testing the new game pipeline:**
+
+```bash
+python world_cli.py newgame --hints "test" --no-browser
+python test_integration.py
+```
+
+---
+
+## 📜 License
+
+[Apache 2.0](LICENSE)
+
+---
+
+**Enjoy building and living in your worlds with BRING v2!**  
 *May your stories be legendary.*

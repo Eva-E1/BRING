@@ -1179,7 +1179,7 @@ class BirthApplier:
     async def _schedule_childhood_milestones(self):
         """Schedule childhood milestone events."""
 
-        if self.params.starting_age >= 15:
+        if self.params.starting_age_years >= 15:
             # Too old for childhood milestones
             return
 

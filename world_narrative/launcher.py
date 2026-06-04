@@ -45,9 +45,21 @@ def system_check() -> Tuple[bool, str]:
     # LLM check
     try:
         llm = LLMClient()
-        # Quick test - try a simple embedding
+        # Quick test - try a simple embedding (use sync method if available)
         try:
-            asyncio.run(llm.embed("test"))
+            # Try sync embed first
+            if hasattr(llm, 'embed_sync'):
+                llm.embed_sync("test")
+            elif hasattr(llm, 'embed'):
+                # For async embed, check if we're in an async context
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    # No running loop, safe to use asyncio.run()
+                    asyncio.run(llm.embed("test"))
+                else:
+                    # We're in an async context, skip the test
+                    pass
         except AttributeError:
             # LLMClient might not have embed method, try generate
             pass

@@ -78,7 +78,7 @@ if not ws_found:
 print("\n[3] Checking template features...")
 template_checks = [
     ('NEW button (HTML)', 'id="newGameBtn"'),
-    ('NEW button handler (JS)', 'newGameBtn.addEventListener'),
+    ('NEW button handler (JS)', "newGameBtn').addEventListener"),
     ('Session URL param', 'urlParams.get'),
     ('Character URL param', 'initialCharacter'),
     ('Roleplay WebSocket', 'ws/roleplay/'),

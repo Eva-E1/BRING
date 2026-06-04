@@ -2,13 +2,16 @@
 """FastAPI web API for the Lore Explorer – extended with UI and /api prefix rewriting."""
 import asyncio
 import json
+import logging
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from fastapi import FastAPI, Query, UploadFile, File, HTTPException, Request
 from fastapi.responses import Response, HTMLResponse
 from fastapi import WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from .store import GraphStore
@@ -18,6 +21,8 @@ from .templates import UI_HTML
 
 from world_narrative.context import NarrativeContext
 from world_explorer.config import DEFAULT_DB_PATH as NARRATIVE_DB_PATH
+
+logger = logging.getLogger(__name__)
 
 
 # ------------------------------------------------------------------
@@ -34,10 +39,96 @@ class RewriteApiPrefixMiddleware(BaseHTTPMiddleware):
 
 
 # ------------------------------------------------------------------
+# Lifespan: initialize engine on startup, tear down on shutdown
+# ------------------------------------------------------------------
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup / shutdown hook - uses existing NarrativeContext."""
+    # Startup
+    logger.info("🚀 Starting World Explorer API...")
+
+    # Initialize legacy subsystems (store, nav, history_mgr)
+    global store, nav, history_mgr, _shared_context
+    from world_core.history_manager import HistoryManager
+
+    _shared_context = NarrativeContext(NARRATIVE_DB_PATH)
+    await _shared_context.graph_store.boot()
+
+    store = _shared_context.graph_store
+    nav = Navigator(store)
+    history_mgr = HistoryManager(DEFAULT_DB_PATH)
+
+    await _shared_context.start_background_services()
+    if _shared_context.world_memory:
+        _shared_context.world_memory.set_broadcast_callback(broadcast_memory_event)
+
+    # Initialize route modules with nav and store
+    from .routes.entities import init as init_entities
+    from .routes.memory import init as init_memory
+    from .routes.branches import init as init_branches
+    init_entities(nav, store)
+    init_memory(_shared_context)
+    init_branches(store)
+
+    # Create RoleplayEngine using existing NarrativeContext
+    engine = _shared_context.create_roleplay_engine()
+    from .routes.chat import set_engine
+    set_engine(engine)
+    app.state.engine = engine
+    app.state.gm = engine.gm
+    app.state.world_frame = engine.world_frame
+    logger.info("✅ RoleplayEngine initialized and mounted at /chat")
+
+    yield  # Running
+
+    # Shutdown
+    if _shared_context is not None:
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                asyncio.create_task(_shared_context.stop_background_services())
+            else:
+                loop.run_until_complete(_shared_context.stop_background_services())
+        except Exception:
+            pass
+    logger.info("👋 World Explorer API shut down")
+
+
+# ------------------------------------------------------------------
+# Engine builder - simplified, uses NarrativeContext
+# ------------------------------------------------------------------
+# The RoleplayEngine is now created via _shared_context.create_roleplay_engine()
+# in the lifespan function above.
+
+
+# ------------------------------------------------------------------
 # FastAPI App
 # ------------------------------------------------------------------
-app = FastAPI(title="Lore Explorer API + UI", version="1.0")
+app = FastAPI(title="World Explorer", description="Interactive world exploration and roleplay API", version="2.0.0", lifespan=lifespan)
+
+# CORS — allow the frontend to call the API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],           # tighten in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.add_middleware(RewriteApiPrefixMiddleware)
+
+
+# ------------------------------------------------------------------
+# Mount routers - ORDER MATTERS: more specific prefixes first
+# ------------------------------------------------------------------
+from .routes.chat import router as chat_router
+from .routes.entities import router as entities_router
+from .routes.memory import router as memory_router
+from .routes.branches import router as branches_router
+
+app.include_router(chat_router)           # /chat/message, /chat/setup, /chat/ws
+app.include_router(entities_router)       # /entities/...
+app.include_router(memory_router)         # /memory/...
+app.include_router(branches_router)       # /branches/...
 
 
 # ------------------------------------------------------------------
@@ -116,42 +207,6 @@ async def serve_ui():
 
 # ------------------------------------------------------------------
 # Startup / Shutdown Events
-# ------------------------------------------------------------------
-@app.on_event("startup")
-async def startup():
-    global store, nav, history_mgr, _shared_context
-    from world_core.history_manager import HistoryManager
-
-    store = GraphStore(DEFAULT_DB_PATH)
-    store.boot()
-    nav = Navigator(store)
-    history_mgr = HistoryManager(DEFAULT_DB_PATH)
-
-    # Initialize shared context and start background services once
-    _shared_context = NarrativeContext(NARRATIVE_DB_PATH)
-    await _shared_context.start_background_services()
-
-    # Register the WebSocket broadcasting callback for memory events
-    _shared_context.world_memory.set_broadcast_callback(broadcast_memory_event)
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    """Clean up shared context on shutdown."""
-    global _shared_context
-    if _shared_context is not None:
-        import asyncio
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                asyncio.create_task(_shared_context.stop_background_services())
-            else:
-                loop.run_until_complete(_shared_context.stop_background_services())
-        except Exception:
-            pass
-        _shared_context = None
-
-
 # ------------------------------------------------------------------
 # Entity API Endpoints
 # ------------------------------------------------------------------
@@ -334,11 +389,23 @@ class RoleplaySession:
 
     async def send_status(self):
         """Send current character status and location."""
+        import json
+        from datetime import datetime
+
+        # Get current_time and convert to string if it's a datetime
+        current_time = getattr(self.engine, 'current_time', None)
+        time_str = None
+        if current_time:
+            if isinstance(current_time, datetime):
+                time_str = current_time.isoformat()
+            else:
+                time_str = str(current_time)
+
         status = {
             "type": "status",
             "character": getattr(self.engine, 'active_character', None),
             "location": getattr(self.engine, 'current_location', None),
-            "time": getattr(self.engine, 'current_time', None),
+            "time": time_str,
             "health": None,
             "mood": None,
         }
@@ -351,18 +418,38 @@ class RoleplaySession:
 
     async def process_message(self, data: dict):
         """Process a single message from the client."""
+        import logging
+        logger = logging.getLogger("roleplay")
+
         msg_type = data.get("type", "text")
         if msg_type == "text":
             user_input = data.get("content", "")
             if not user_input:
                 return
+            logger.info(f"Processing input: {user_input}")
             # Process input asynchronously and stream response
-            response = await self.engine.process_input(user_input)
-            # Send the full response
-            await self.websocket.send_json({
-                "type": "narrative",
-                "content": response
-            })
+            try:
+                logger.info("Calling engine.process_input...")
+                response = await self.engine.process_input(user_input)
+                logger.info(f"Got response: {response[:100] if response else 'empty'}...")
+                # Send the full response
+                await self.websocket.send_json({
+                    "type": "narrative",
+                    "content": response
+                })
+                logger.info("Response sent to WebSocket")
+            except Exception as e:
+                import traceback
+                tb = traceback.format_exc()
+                logger.error(f"Error in process_input: {e}\n{tb}")
+                print(f"[ROLEPLAY ERROR] {e}")
+                print(tb)
+                # Send error message instead of crashing
+                await self.websocket.send_json({
+                    "type": "error",
+                    "content": f"Error: {str(e)[:100]}"
+                })
+                return
             # Update status after action
             await self.send_status()
         elif msg_type == "command":
@@ -383,17 +470,34 @@ class RoleplaySession:
 
     async def run(self):
         """Main loop for this session."""
+        import logging
+        logger = logging.getLogger("roleplay")
+
         try:
             while self._running:
-                data = await self.websocket.receive_text()
                 try:
-                    msg = json.loads(data)
-                    await self.process_message(msg)
-                except json.JSONDecodeError:
-                    # Treat as plain text input
-                    await self.process_message({"type": "text", "content": data})
-        except WebSocketDisconnect:
-            pass
+                    data = await self.websocket.receive_text()
+                    logger.info(f"Received from {self.session_id}: {data[:100]}...")
+                    try:
+                        msg = json.loads(data)
+                        await self.process_message(msg)
+                    except json.JSONDecodeError:
+                        # Treat as plain text input
+                        logger.info(f"JSON decode failed, treating as text: {data}")
+                        await self.process_message({"type": "text", "content": data})
+                except WebSocketDisconnect:
+                    logger.info(f"WebSocket disconnected for {self.session_id}")
+                    break
+                except Exception as e:
+                    # Send error to client but keep connection alive
+                    logger.error(f"Error in run loop: {e}")
+                    try:
+                        await self.websocket.send_json({
+                            "type": "error",
+                            "content": f"Error: {str(e)[:100]}"
+                        })
+                    except:
+                        break
         finally:
             # Save session state
             if hasattr(self.engine, 'save_session'):
@@ -783,3 +887,22 @@ async def api_system_check():
     from world_narrative.launcher import system_check
     ok, msg = system_check()
     return {"ok": ok, "message": msg}
+
+
+# ------------------------------------------------------------------
+# Health Check & Root
+# ------------------------------------------------------------------
+@app.get("/health")
+async def health():
+    return {
+        "status": "ok",
+        "engine_ready": hasattr(app.state, "engine"),
+    }
+
+
+@app.get("/")
+async def root():
+    return {
+        "message": "World Explorer API. POST /chat/message to send messages.",
+        "docs": "/docs",
+    }

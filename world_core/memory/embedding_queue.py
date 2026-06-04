@@ -1,8 +1,11 @@
 """High-throughput batching of embedding requests."""
 import asyncio
 import hashlib
+import logging
 from typing import List, Optional, Tuple
 from world_builder.llm import LLMClient
+
+logger = logging.getLogger(__name__)
 
 
 class EmbeddingQueue:
@@ -46,12 +49,22 @@ class EmbeddingQueue:
         return await future
 
     async def _worker(self):
-        """Background worker that periodically flushes the queue."""
+        """Background worker that periodically flushes the queue with error handling."""
+        backoff = self.flush_interval
+        max_backoff = 300
+
         while self._running:
-            await asyncio.sleep(self.flush_interval)
-            async with self._lock:
-                if self._queue:
-                    await self._flush()
+            try:
+                await asyncio.sleep(self.flush_interval)
+                async with self._lock:
+                    if self._queue:
+                        await self._flush()
+                backoff = self.flush_interval  # Reset backoff on successful flush
+            except Exception as e:
+                logger.error(f"EmbeddingQueue worker error: {e}", exc_info=True)
+                logger.info(f"Retrying in {backoff} seconds (exponential backoff)")
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, max_backoff)
 
     def _generate_fallback_embedding(self, text: str) -> List[float]:
         """Generate a deterministic hash-based embedding when API fails."""

@@ -3,6 +3,7 @@ BRING v2 — Graph store using UnifiedEntityStore for O(1) lookups and batch ope
 """
 from __future__ import annotations
 
+import asyncio
 import time
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -40,7 +41,7 @@ class GraphStore:
         self._unified_store: Optional[UnifiedEntityStore] = None
         self.booted = False
 
-    def boot(self):
+    async def boot(self):
         if self.booted:
             return
 
@@ -56,31 +57,32 @@ class GraphStore:
         self.name_index = self._unified_store.name_index
         console.print(f"[green]✓[/] {len(self.entities)} entities loaded")
 
-        # Build graph
+        # Build graph – offload to thread to avoid blocking event loop
         console.print("[cyan]Building graph...[/]")
-        self.graph = build_graph(self.entities, self.name_index)
+        self.graph = await asyncio.to_thread(build_graph, self.entities, self.name_index)
         console.print(
             f"[green]✓[/] Graph: {self.graph.number_of_nodes()} nodes, "
             f"{self.graph.number_of_edges()} edges"
         )
 
-        # Self-healing
+        # Self-healing – offload to thread
         if AUTO_HEAL:
             console.print("[cyan]Running self‑healing validator...[/]")
             validator = GraphValidator(self.graph, self.entities, self.name_index, auto_heal=True)
-            report = validator.audit()
+            report = await asyncio.to_thread(validator.audit)
             console.print(f"[green]✓[/] Healed {len(validator.heal_log)} issues")
 
         # Branches
         self.branches = BranchManager(self.graph, self.db_path)
 
-        # Embeddings
+        # Embeddings – offload to thread
         console.print("[cyan]Preparing embeddings...[/]")
         if not embedding_is_configured():
             console.print("[yellow]⚠ Embedding API not configured.[/]")
         else:
             with console.status("Embedding entities..."):
-                self.embeddings.build_embeddings(
+                await asyncio.to_thread(
+                    self.embeddings.build_embeddings,
                     self.entities, DEFAULT_EMBED_LAYERS,
                     cache_file=self.embed_cache_file,
                 )
@@ -89,6 +91,23 @@ class GraphStore:
         elapsed = time.time() - t0
         console.print(f"[bold green]Store booted in {elapsed:.2f}s[/]")
         self.booted = True
+
+    def boot_sync(self):
+        """Synchronous wrapper around boot() for backward compatibility with CLI commands.
+
+        Must NOT be called if an event loop is already running (e.g. inside API startup).
+        In async contexts, use 'await graph_store.boot()' instead.
+        """
+        if self.booted:
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop, safe to use asyncio.run()
+            asyncio.run(self.boot())
+        else:
+            # There's a running loop, use it to run boot()
+            loop.run_until_complete(self.boot())
 
     def get_active_graph(self) -> nx.DiGraph:
         return self.branches.get_active_graph() if self.branches else self.graph
@@ -126,8 +145,7 @@ class GraphStore:
         else:
             console.print("[cyan]No graph changes to persist[/]")
 
-    def reload(self):
+    async def reload(self):
         """Force reload from disk."""
         self.booted = False
-        self.boot()
-
+        await self.boot()

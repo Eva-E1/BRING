@@ -300,6 +300,9 @@ class WorldMemory:
         self.storage_path = storage_path
         self.llm = llm
 
+        # Disable FAISS due to dimension mismatch issues - use linear search only
+        self._faiss_disabled = True
+
         # Initialize components
         self.partition_mgr = MemoryPartitionManager(
             storage_path,
@@ -375,6 +378,9 @@ class WorldMemory:
         # Lazy loading - entries loaded on first access
         self._entries_loaded = False
 
+        # Lock for _ensure_loaded to prevent race condition
+        self._load_lock = asyncio.Lock()
+
         # Broadcast callback for WebSocket memory events
         self._broadcast_callback = None
 
@@ -384,12 +390,24 @@ class WorldMemory:
         """Set a callback function to be called when new memories are added."""
         self._broadcast_callback = callback
 
+    async def _lock_with_timeout(self, lock: asyncio.Lock, timeout: float = 5.0):
+        """Acquire a lock with timeout to prevent deadlocks."""
+        try:
+            return await asyncio.wait_for(lock.acquire(), timeout=timeout)
+        except asyncio.TimeoutError:
+            logger.warning(f"Lock acquisition timed out after {timeout}s")
+            return False
+
     async def _ensure_loaded(self):
-        """Ensure entries are loaded (async version)."""
+        """Ensure entries are loaded (async version) with race condition fix."""
         if self._entries_loaded:
             return
-        await self._load_active_entries_async()
-        self._entries_loaded = True
+        async with self._load_lock:
+            # Double-check after acquiring lock
+            if self._entries_loaded:
+                return
+            await self._load_active_entries_async()
+            self._entries_loaded = True
 
     async def _load_active_entries_async(self):
         """Load recent partitions into active memory (async version)."""
@@ -548,8 +566,14 @@ class WorldMemory:
 
         # Store in partition (with embedding now included)
         await self.partition_mgr.save_entry(entry.to_dict())
-        async with self._active_lock:
+        # Use timeout to prevent potential deadlock
+        acquired = await self._lock_with_timeout(self._active_lock, timeout=5.0)
+        try:
             self.active_entries[entry.id] = entry
+        finally:
+            if acquired:
+                self._active_lock.release()
+            logger.warning("Failed to acquire _active_lock in add_memory, entry may not be in active_entries")
 
         # Write buffer for metadata updates
         await self.write_buffer.append(entry.to_dict())
@@ -713,23 +737,42 @@ class WorldMemory:
 
         # Pass 2: Vector similarity search
         query_emb = await self.embedding_queue.embed(query)
+        # Ensure it's a 2D array for FAISS (n_samples, n_features)
         query_np = np.array(query_emb).astype('float32')
+        if query_np.ndim == 1:
+            query_np = query_np.reshape(1, -1)
 
         # Determine valid FAISS IDs from filters
         valid_faiss_ids = self._build_valid_mask(
             entity_filter, source_type_filter, time_window, min_importance
         )
 
-        if self.faiss_index and self.faiss_index.total_entries() > 0:
-            vector_results = await self._vector_retrieve(
-                query_np, top_k * 2, valid_faiss_ids
-            )
-            for score, entry in vector_results:
-                if entry.id not in seen_ids:
-                    results.append(self._entry_to_result(entry, score))
-                    seen_ids.add(entry.id)
+        # Skip FAISS if dimension doesn't match - use linear search instead
+        query_dim = query_np.shape[1] if query_np.ndim > 1 else len(query_emb)
+        expected_dim = getattr(self.faiss_index, 'dimension', 0)
+
+        if self.faiss_index and self.faiss_index.total_entries() > 0 and query_dim == expected_dim:
+            try:
+                vector_results = await self._vector_retrieve(
+                    query_np, top_k * 2, valid_faiss_ids
+                )
+                for score, entry in vector_results:
+                    if entry.id not in seen_ids:
+                        results.append(self._entry_to_result(entry, score))
+                        seen_ids.add(entry.id)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"FAISS retrieval failed: {e}. Using linear search.")
+                linear_results = await self._linear_retrieve(
+                    query_emb, top_k * 2, valid_faiss_ids
+                )
         else:
-            # Fallback to linear search
+            # Fallback to linear search (dimension mismatch or no FAISS)
+            if query_dim != expected_dim and self.faiss_index:
+                import logging
+                logging.getLogger(__name__).warning(
+                    f"Skipping FAISS: query dimension {query_dim} != index dimension {expected_dim}"
+                )
             linear_results = await self._linear_retrieve(
                 query_emb, top_k * 2, valid_faiss_ids
             )
@@ -800,6 +843,27 @@ class WorldMemory:
     async def get_last_seen(self, session_id: str) -> Optional[datetime]:
         """Get the last seen timestamp for a session."""
         return self.session_delta.get_last_seen(session_id)
+
+    def get_recent_global_facts(self, limit: int = 5) -> List[Dict]:
+        """Get recent global facts for world knowledge retrieval.
+
+        Returns a list of recent memory entries as facts.
+        """
+        facts = []
+        # Get most recent entries from active_entries
+        sorted_entries = sorted(
+            self.active_entries.values(),
+            key=lambda e: e.timestamp if hasattr(e, 'timestamp') else datetime.min,
+            reverse=True
+        )
+        for entry in sorted_entries[:limit]:
+            facts.append({
+                "fact": entry.content[:200] if entry.content else "",
+                "importance": getattr(entry, 'importance', 0.5),
+                "source_type": getattr(entry, 'source_type', 'unknown'),
+                "timestamp": entry.timestamp.isoformat() if hasattr(entry, 'timestamp') else None
+            })
+        return facts
 
     # ==================== Internal Methods ====================
 
@@ -889,10 +953,21 @@ class WorldMemory:
         if not self.faiss_index:
             return []
 
-        # Normalize query vector for cosine similarity
-        faiss.normalize_L2(query_np)
-
-        scores, ids = self.faiss_index.search(query_np, k, valid_mask)
+        # Try FAISS search with error handling for dimension mismatches
+        try:
+            # Normalize query vector for cosine similarity
+            try:
+                faiss.normalize_L2(query_np)
+            except AssertionError as e:
+                import logging
+                logging.getLogger(__name__).warning(f"FAISS normalize_L2 dimension error: {e}. Using linear search.")
+                return await self._linear_retrieve(query_np.flatten(), k, valid_mask)
+            scores, ids = self.faiss_index.search(query_np, k, valid_mask)
+        except (AssertionError, Exception) as e:
+            # FAISS dimension mismatch - fall back to linear search
+            import logging
+            logging.getLogger(__name__).warning(f"FAISS search failed: {e}. Using linear search.")
+            return await self._linear_retrieve(query_np.flatten(), k, valid_mask)
         results = []
 
         for score, fid in zip(scores, ids):
@@ -959,8 +1034,21 @@ class WorldMemory:
         if not emb_list:
             return []
 
-        embeddings = np.array(emb_list)
+        # Filter embeddings to ensure all have the same dimension as query
+        expected_dim = len(query_emb)
+        valid_emb_list = []
+        valid_id_list = []
+        for emb, eid in zip(emb_list, id_list):
+            if emb is not None and len(emb) == expected_dim:
+                valid_emb_list.append(emb)
+                valid_id_list.append(eid)
+
+        if not valid_emb_list:
+            return []
+
+        embeddings = np.array(valid_emb_list)
         query_np = np.array(query_emb)
+        id_list = valid_id_list
 
         # Offload CPU-bound NumPy operations to thread
         scores = await asyncio.to_thread(

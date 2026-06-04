@@ -47,6 +47,7 @@ class RomanceEngine:
         npc_mgr: "OptimizedMemoryStore",
         director: "Director",
         data_dir: Optional[Path] = None,
+        world_frame: Optional[dict] = None,
     ):
         self.prob_engine = prob_engine
         self.world_memory = world_memory
@@ -54,6 +55,7 @@ class RomanceEngine:
         self.npc_mgr = npc_mgr
         self.director = director
         self.data_dir = data_dir or Path("world_db/romance")
+        self._world_frame = world_frame or {}
         self._relationships: Dict[str, RelationshipMemory] = {}
         self._load()
 
@@ -109,7 +111,7 @@ class RomanceEngine:
         class_match = 1.0 if actor_class == target_class else 0.9
 
         forbidden_modifier = 1.0
-        world_rules = self.world_memory.world_frame.get("world_rules", [])
+        world_rules = self._world_frame.get("world_rules", [])
         for rule in world_rules:
             if "forbidden" in rule.get("name", "").lower() and "love" in rule.get("name", "").lower():
                 forbidden_modifier = rule.get("effect", {}).get("compatibility_modifier", 0.5)
@@ -206,6 +208,7 @@ class RomanceEngine:
     ) -> Tuple[bool, str, float]:
         """Attempt to develop attraction - returns (success, narrative, new_affection)."""
         from .profiles import ROMANCE_ATTRACTION
+        from world_core.probability import OutcomeQuality
 
         rel = await self.get_or_create_relationship(actor, target)
         context = await self._build_context(actor, target, location, rel)
@@ -213,9 +216,9 @@ class RomanceEngine:
         result = self.prob_engine.roll(ROMANCE_ATTRACTION, context, actor)
 
         affection_delta = 0.15 if result.success else -0.05
-        if result.critical_success:
+        if result.quality == OutcomeQuality.CRITICAL_SUCCESS:
             affection_delta = 0.25
-        elif result.critical_failure:
+        elif result.quality == OutcomeQuality.CRITICAL_FAILURE:
             affection_delta = -0.10
 
         new_affection = min(1.0, max(0.0, rel.affection + affection_delta))
@@ -312,9 +315,9 @@ class RomanceEngine:
         result = self.prob_engine.roll(ROMANCE_DATE, context, actor)
 
         affection_delta = 0.15 if result.success else -0.05
-        if result.critical_success:
+        if result.quality == OutcomeQuality.CRITICAL_SUCCESS:
             affection_delta = 0.25
-        elif result.critical_failure:
+        elif result.quality == OutcomeQuality.CRITICAL_FAILURE:
             affection_delta = -0.10
 
         new_affection = min(1.0, max(0.0, rel.affection + affection_delta))
@@ -357,6 +360,10 @@ class RomanceEngine:
         result = self.prob_engine.roll(ROMANCE_KISS, context, actor)
 
         affection_delta = 0.10 if result.success else -0.08
+        if result.quality == OutcomeQuality.CRITICAL_SUCCESS:
+            affection_delta = 0.20
+        elif result.quality == OutcomeQuality.CRITICAL_FAILURE:
+            affection_delta = -0.15
         new_affection = min(1.0, max(0.0, rel.affection + affection_delta))
 
         rel.affection = new_affection

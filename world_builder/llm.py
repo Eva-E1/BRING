@@ -103,14 +103,24 @@ class LLMClient:
         cache_size: int = 256,
         max_concurrent: int = 8,
     ):
-        self.base_url = base_url or os.environ.get("BASE_URL") or os.environ.get("LLM_BASE_URL")
+        # Try unified config first, then fall back to environment variables
+        try:
+            from world_config import WORLD_LLM_BASE_URL, WORLD_LLM_API_KEY, WORLD_LLM_MODEL, WORLD_EMBEDDING_MODEL
+            self.base_url = base_url or WORLD_LLM_BASE_URL or os.environ.get("BASE_URL") or os.environ.get("LLM_BASE_URL")
+            self.api_key = api_key or WORLD_LLM_API_KEY or os.environ.get("LIARA_API_KEY") or os.environ.get("LLM_API_KEY")
+            self.default_model = default_model or WORLD_LLM_MODEL or os.environ.get("LLM_MODEL", "gpt-4o-mini")
+            self.embedding_model = embedding_model or WORLD_EMBEDDING_MODEL or os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small")
+        except ImportError:
+            # Fall back to old behavior if world_config not available
+            self.base_url = base_url or os.environ.get("BASE_URL") or os.environ.get("LLM_BASE_URL")
+            self.api_key = api_key or os.environ.get("LIARA_API_KEY") or os.environ.get("LLM_API_KEY")
+            self.default_model = default_model or os.environ.get("LLM_MODEL", "openai/gpt-4o-mini")
+            self.embedding_model = embedding_model or os.environ.get("EMBEDDING_MODEL", "openai/text-embedding-3-small")
+
         if not self.base_url:
-            raise ValueError("No base URL provided.")
-        self.api_key = api_key or os.environ.get("LIARA_API_KEY") or os.environ.get("LLM_API_KEY")
+            raise ValueError("No base URL provided. Set WORLD_LLM_BASE_URL environment variable.")
         if not self.api_key:
-            raise ValueError("No API key provided.")
-        self.default_model = default_model or os.environ.get("LLM_MODEL", "openai/gpt-4o-mini")
-        self.embedding_model = embedding_model or os.environ.get("EMBEDDING_MODEL", "openai/text-embedding-3-small")
+            raise ValueError("No API key provided. Set WORLD_LLM_API_KEY environment variable.")
 
         self._http_client = httpx.AsyncClient(
             limits=httpx.Limits(max_connections=max_connections, max_keepalive_connections=20),
@@ -189,8 +199,8 @@ class LLMClient:
 
     # ── Public API (backward compatible) ───────────────────
 
-    async def generate_text(self, prompt: str, temperature: float = 0.7) -> str:
-        result = await self._chat(prompt, temperature=temperature, json_mode=False)
+    async def generate_text(self, prompt: str, temperature: float = 0.7, max_tokens: Optional[int] = None) -> str:
+        result = await self._chat(prompt, temperature=temperature, json_mode=False, max_tokens=max_tokens)
         return result["text"]
 
     async def generate_json(self, prompt: str, temperature: float = 0.7) -> dict:
@@ -408,4 +418,3 @@ class LLMClient:
     @property
     def cache_stats(self) -> Dict[str, int]:
         return self._response_cache.stats
-

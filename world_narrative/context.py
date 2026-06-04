@@ -61,7 +61,8 @@ class NarrativeContext:
         self.gm = GraphManager(entity_store_path=get_entity_store_path(db_path))
         self.world_frame = self._load_world_frame()
         self.graph_store = GraphStore(db_path)
-        self.graph_store.boot()
+        # Note: boot() is called separately in async contexts (e.g. API startup).
+        # Do NOT call boot_sync() here - it causes issues when the event loop is already running.
 
         # ============================================================
         # NEW: Revolutionary Graph-Based Self-Optimizing Memory System

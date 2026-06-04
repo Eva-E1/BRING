@@ -16,7 +16,7 @@ class IncrementalFAISSIndex:
         self._initialize_index()
 
     def _initialize_index(self):
-        """Initialize the FAISS index."""
+        """Initialize the FAISS index with robust error handling."""
         try:
             import faiss
             self._faiss = faiss
@@ -24,6 +24,16 @@ class IncrementalFAISSIndex:
             self._index = faiss.IndexFlatIP(self.dimension)
             self._id_map = faiss.IndexIDMap(self._index)
         except ImportError:
+            self._faiss = None
+            self._index = None
+            self._id_map = None
+            import logging
+            logging.getLogger(__name__).warning("FAISS not installed, using linear search for memory retrieval")
+        except Exception as e:
+            # Catch segfaults and other native library errors
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"FAISS initialization failed: {e}")
             self._faiss = None
             self._index = None
             self._id_map = None
@@ -40,8 +50,17 @@ class IncrementalFAISSIndex:
         if not vectors or self._id_map is None:
             return
 
-        # Stack vectors and normalize for cosine similarity
+        # Validate vector dimensions
         arr = np.vstack(vectors).astype('float32')
+        if arr.shape[1] != self.dimension:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Vector dimension mismatch in add: got {arr.shape[1]}, expected {self.dimension}. "
+                f"Skipping {len(vectors)} vectors."
+            )
+            return
+
+        # Stack vectors and normalize for cosine similarity
         self._faiss.normalize_L2(arr)
 
         # Add with IDs
@@ -80,12 +99,31 @@ class IncrementalFAISSIndex:
         if self._id_map is None or self._id_map.ntotal == 0:
             return np.array([]), np.array([])
 
-        # Normalize query vector
-        query_np = query.reshape(1, -1).astype('float32')
-        self._faiss.normalize_L2(query_np)
+        # Wrap entire operation in try-except to catch dimension assertion errors
+        try:
+            # Validate query dimension matches index dimension
+            query_flat = np.asarray(query).astype('float32').flatten()
+            if query_flat.shape[0] != self.dimension:
+                import logging
+                logging.getLogger(__name__).warning(
+                    f"Query dimension mismatch: got {query_flat.shape[0]}, expected {self.dimension}. "
+                    f"Returning empty results."
+                )
+                return np.array([]), np.array([])
 
-        # Perform search
-        scores, ids = self._id_map.search(query_np, k)
+            # Normalize query vector
+            query_np = query_flat.reshape(1, -1)
+            self._faiss.normalize_L2(query_np)
+
+            # Perform search
+            scores, ids = self._id_map.search(query_np, k)
+        except AssertionError as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"FAISS search failed due to dimension mismatch (likely index={self.dimension} vs query={query_flat.shape[0]}). "
+                f"Returning empty results. Error: {e}"
+            )
+            return np.array([]), np.array([])
 
         # Filter out deleted and invalid IDs
         keep = []

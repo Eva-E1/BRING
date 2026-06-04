@@ -56,12 +56,19 @@ class MemoryOptimizer:
         logger.info("MemoryOptimizer stopped")
 
     async def _loop(self):
-        """Background loop that runs optimization periodically."""
+        """Background loop that runs optimization periodically with exponential backoff."""
+        backoff = 60  # Start with 60 seconds
+        max_backoff = 300  # Max 5 minutes
+
         while self._running:
             try:
                 await self._run()
+                backoff = 60  # Reset backoff on successful run
             except Exception as e:
                 logger.error(f"Optimizer error: {e}", exc_info=True)
+                logger.info(f"Retrying in {backoff} seconds (exponential backoff)")
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, max_backoff)
             await asyncio.sleep(self.interval_hours * 3600)
 
     async def _run(self):
@@ -205,4 +212,3 @@ class MemoryOptimizer:
         self._stats["last_run"] = now.isoformat()
         logger.info("=== Full maintenance cycle complete ===")
         return report
-

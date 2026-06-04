@@ -51,8 +51,23 @@ class ClusterEngine:
             logger.warning("sklearn not available, using simple clustering")
             return await self._simple_clustering(valid)
 
+        # Filter embeddings to ensure consistent dimensions
+        if not valid:
+            return []
+
+        # Get expected dimension from first valid embedding
+        first_emb = valid[0].embedding
+        if first_emb is None:
+            return []
+        expected_dim = len(first_emb)
+
+        # Filter entries to only those with matching dimension
+        valid_filtered = [e for e in valid if e.embedding is not None and len(e.embedding) == expected_dim]
+        if len(valid_filtered) < self.min_cluster_size:
+            return []
+
         # Convert embeddings to numpy array
-        embeddings = np.array([e.embedding for e in valid])
+        embeddings = np.array([e.embedding for e in valid_filtered])
 
         # Use DBSCAN with cosine distance
         # eps = 1 - similarity_threshold gives us the right distance threshold

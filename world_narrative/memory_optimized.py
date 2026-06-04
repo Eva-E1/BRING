@@ -410,6 +410,7 @@ class OptimizedMemoryStore:
         importance: float = 0.5,
         involved_entities: Optional[List[str]] = None,
         location: Optional[str] = None,
+        tags: Optional[List[str]] = None,
     ) -> str:
         """
         Add a new episodic memory for an NPC.

@@ -656,7 +656,7 @@ def get_profile(name: str) -> ProbabilityProfile:
 
 def list_profiles() -> list[str]:
     """Get list of available profile names."""
-    return sorted(set(PFILES.keys()))
+    return sorted(set(PROFILES.keys()))
 
 
 def register_profile(profile: ProbabilityProfile):
