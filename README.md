@@ -317,6 +317,8 @@ New components:
 
 ## 🎮 Roleplay Session – In‑Depth Example
 
+### Starting Your First Game
+
 Start a new game with web UI:
 
 ```bash
@@ -326,7 +328,9 @@ python world_cli.py newgame --hints "a young elven ranger named Kaelen" --isekai
 The browser opens with a terminal‑style interface.  
 You see the opening narrative (birth scene), family tree, and a status panel.
 
-Now type actions in the web UI input box:
+### Basic Interaction Patterns
+
+**Natural Language Actions:**
 
 ```
 > I look around the forest clearing.
@@ -334,7 +338,15 @@ Now type actions in the web UI input box:
 [Narrator] Sunlight filters through the ancient oaks, dappling the mossy ground. A small stream babbles nearby. You notice a worn path leading east, and a strange symbol carved into a stone.
 ```
 
-Talk to an NPC:
+**Movement:**
+
+```
+> go to Riverfall
+> head north through the archway
+> climb the old tower stairs
+```
+
+**Talking to NPCs:**
 
 ```
 > talk to Elara "Do you know about the symbol on that stone?"
@@ -342,7 +354,17 @@ Talk to an NPC:
 Elara says: "Ah, that's the mark of the Wardens. They used to guard this forest, but they vanished a century ago. Some say a curse drove them out."
 ```
 
-Use probability actions:
+**Multi-turn Conversations:**
+
+```
+> ask Elara about the Wardens
+> follow up with "Where did they go?"
+> persuade Elara "We should investigate together"
+```
+
+### Probability-Based Actions
+
+All skill-based actions use the deterministic probability system:
 
 ```
 > /attack Goblin
@@ -350,7 +372,21 @@ Use probability actions:
 [Narrator] Kaelen attacks Goblin: success (prob 72%, roll 0.34). The goblin takes 10 damage!
 ```
 
-Check romance status:
+**Available Action Types:**
+
+| Action | Command | Description |
+|--------|---------|-------------|
+| Combat | `/attack <target>` | Physical attack with weapon/unarmed |
+| Persuasion | `/persuade <npc> "<argument>"` | Convince someone to help/agree |
+| Stealth | `/stealth` | Sneak past enemies or hide |
+| Intimidation | `/intimidate <npc>` | Scare or threaten someone |
+| Deception | `/deceive <npc> "<lie>"` | Lie convincingly |
+| Investigation | `/investigate <object>` | Search for clues/details |
+| Athletics | `/athletics <challenge>` | Physical feats (jump, swim, climb) |
+
+### Romance System Deep Dive
+
+Check current relationship status:
 
 ```
 > /romance-status --character Kaelen --target Elara
@@ -362,15 +398,122 @@ Compatibility: 68%
 Stage: attraction
 ```
 
-Attempt a confession:
+**Romance Progression Stages:**
+
+1. **Neutral** → No romantic interest yet
+2. **Attraction** → Mutual interest detected
+3. **Crush** → One-sided strong feelings
+4. **Dating** → Officially in a relationship
+5. **Engaged** → Promise to marry
+6. **Married** → Lifelong commitment
+
+**Romance Actions:**
 
 ```
+# Attempt to confess feelings
 > /romance-attempt confess --character Kaelen --target Elara --location "Moonlight Garden"
 
 ✅ Confess result: Kaelen confesses his feelings to Elara amazingly. She accepts!
+
+# Go on a date
+> /romance-attempt date --character Kaelen --target Elara --activity "walk by the lake"
+
+# Give a gift (boosts affection)
+> /romance-gift --character Kaelen --target Elara --gift "Silver Necklace"
+
+# Propose marriage (requires high affection & dating status)
+> /romance-attempt propose --character Kaelen --target Elara --ring "Family Heirloom Ring"
 ```
 
-The relationship updates to `dating`.
+**Factors Affecting Romance Success:**
+
+- **Affection Level**: Higher = better success rate
+- **Compatibility**: Based on personality traits, values, background
+- **Current Mood**: NPCs have dynamic emotional states
+- **Location**: Romantic settings provide bonuses
+- **Gifts**: Thoughtful gifts boost affection
+- **Previous Interactions**: History matters
+
+### Advanced Commands Reference
+
+**Character Status:**
+
+```
+> /status
+> /inventory
+> /quests
+> /skills
+> /relationships
+```
+
+**World Interaction:**
+
+```
+> /look          # Describe current location
+> /time          # Show current in-game time
+> /map           # Display known areas
+> /who           # List NPCs in current location
+```
+
+**Session Management:**
+
+```
+> /save my_adventure    # Save current progress
+> /load my_adventure    # Resume saved game
+> /export character     # Export character data as JSON
+> /quit                 # End session (auto-saves)
+```
+
+### Tips for Immersive Roleplay
+
+1. **Use Third Person**: Describe your actions as "Kaelen draws his sword" not "I draw my sword"
+2. **Be Specific**: "I carefully examine the lock for tumblers" works better than "I check the door"
+3. **Engage with NPCs**: Ask follow-up questions, remember their stories
+4. **Think About Consequences**: Actions affect reputation, relationships, and story direction
+5. **Use the Environment**: Interact with objects, use terrain advantages
+6. **Let the Story Unfold**: Sometimes failure creates better narratives than success
+
+### Common Roleplay Scenarios
+
+**Combat Encounter:**
+
+```
+> /attack the goblin raiders
+> take cover behind the stone wall
+> /intimidate the remaining goblins "Surrender or die!"
+> loot the goblin chief's body
+```
+
+**Social Intrigue:**
+
+```
+> attend the noble's banquet
+> talk to Lord Blackwood "Your reputation precedes you"
+> /persuade Blackwood "We share common interests here"
+> /deceive the guard "I'm a visiting merchant from the south"
+> sneak into the private chambers
+> /investigate the locked desk
+```
+
+**Romantic Subplot:**
+
+```
+> invite Elara to dinner at the inn
+> /romance-gift --target Elara --gift "bouquet of moonflowers"
+> talk to Elara "I've been thinking about what you said..."
+> /romance-attempt confess --target Elara
+```
+
+**Mystery Investigation:**
+
+```
+> /investigate the crime scene
+> examine the broken window
+> talk to the witness "What did you see that night?"
+> /investigate the muddy footprints
+> connect the clues in my journal
+> confront the suspect with the evidence
+```
 
 ---
 
@@ -378,63 +521,248 @@ The relationship updates to `dating`.
 
 ### 📌 Branching Storylines
 
+Create alternate timelines without affecting the main story:
+
 ```bash
+# Create a new branch
 world branch create what-if-kaelen-dies
+
+# Switch to the branch
 world branch switch what-if-kaelen-dies
-# Make changes (delete edges, add nodes)
+
+# Make changes (delete edges, add nodes, play differently)
+# ...
+
+# Merge back to main timeline when ready
 world branch merge what-if-kaelen-dies
 ```
 
-### 📌 Starting Point Resolution (CLI)
+**Use Cases:**
+- Test different story outcomes
+- Explore "what if" scenarios
+- Run parallel campaigns with same world
+- Experiment with character decisions
+
+### 📌 Starting Point Resolution
+
+Begin your game at any point with natural language:
 
 ```bash
 world narrative play --start "as Kaelen in the Silverwood forest at dawn, just after a storm"
 ```
 
+The system will:
+1. Locate relevant entities (Kaelen, Silverwood forest)
+2. Set appropriate time and weather conditions
+3. Generate an opening scene matching the context
+4. Position NPCs based on their schedules and relationships
+
+**Examples:**
+```bash
+# Start mid-action
+world narrative play --start "during a tavern brawl, Kaelen is outnumbered"
+
+# Start at a specific event
+world narrative play --start "at the royal ball, moments before the assassination attempt"
+
+# Start with a mystery
+world narrative play --start "waking up in a locked room with no memory of how you got here"
+```
+
 ### 📌 Probability Modifiers
 
-Give Kaelen a temporary +20% combat boost for 5 minutes:
+Temporarily boost or penalize skill checks:
 
 ```bash
+# Give Kaelen a temporary +20% combat boost for 5 minutes (300 seconds)
 world narrative prob modify Kaelen combat_skill 0.2 --duration 300
+
+# Add a situational penalty (-15% to stealth due to heavy armor)
+world narrative prob modify Kaelen stealth -0.15 --reason "wearing plate armor"
+
+# List all active modifiers
+world narrative prob list --character Kaelen
+
+# Remove a specific modifier
+world narrative prob modify Kaelen combat_skill --remove
+
+# Clear all modifiers for a character
+world narrative prob modify Kaelen --clear-all
 ```
+
+**Common Modifier Scenarios:**
+- **Buffs**: Magic spells, potions, morale bonuses, terrain advantages
+- **Debuffs**: Injuries, fatigue, curses, environmental hazards
+- **Situational**: Night vision bonuses, ranged penalties in melee, language barriers
 
 ### 📌 Memory Maintenance
 
+Manage the AI's long-term memory system:
+
 ```bash
-world narrative memory-maintenance --full   # prune, merge, archive
+# Full maintenance (prune old memories, merge similar events, archive)
+world narrative memory-maintenance --full
+
+# Check memory status and statistics
 world narrative memory-status
+
+# Forget low-importance memories from last 30 days
 world narrative memory-forget 30 --min-importance 0.2
+
+# Summarize memories tagged with specific keywords
 world narrative memory-summarise --tag "isekai"
+world narrative memory-summarise --tag "villain plot"
+
+# Export memories for backup or analysis
+world narrative memory-export --output memories_backup.json
+
+# Import memories from another session
+world narrative memory-import --file memories_from_other_game.json
 ```
+
+**Memory System Features:**
+- **Automatic Consolidation**: Similar events merge into cohesive narratives
+- **Importance Scoring**: Critical events preserved, trivial details pruned
+- **Time-Based Partitioning**: Recent memories more accessible than old ones
+- **Semantic Search**: Find memories by meaning, not just keywords
 
 ### 📌 Enriching an Existing World
 
+Automatically improve world consistency and depth:
+
 ```bash
+# Full enrichment pipeline (recommended)
 world intel enrich --fix-rules
+
+# Individual enrichment steps
+world intel check-rules --fix          # Validate entity consistency
+world intel recommend                  # Suggest new relationships
+world intel deduplicate                # Merge duplicate entities
+world intel expand "Location:Silverwood" --depth 2  # Flesh out subgraph
 ```
+
+**What Enrichment Does:**
+- Completes missing L1/L2/L3 layers for entities
+- Detects and fixes contradictory information
+- Identifies isolated nodes and suggests connections
+- Merges near-duplicate characters/locations
+- Generates missing backstory elements
+- Validates all entities against world rules
 
 ### 📌 Visualising the Graph
 
+Export and explore your world as an interactive graph:
+
 ```bash
+# Generate interactive HTML visualization
 world explore visualize --output myworld.html
-# open myworld.html in a browser
+
+# Open in browser (Linux/Mac)
+xdg-open myworld.html    # Linux
+open myworld.html        # Mac
+start myworld.html       # Windows
 ```
 
+**Visualization Features:**
+- Zoomable, pannable network graph
+- Color-coded entity types (characters, locations, items, factions)
+- Click nodes to see full details
+- Highlight relationships and connection paths
+- Filter by entity type or relationship type
+- Search and highlight specific entities
+
 ### 📌 Running the API Server Separately
+
+Start the backend server for custom integrations:
 
 ```bash
 world serve --port 8000
 ```
 
-The API includes endpoints for:
-- `/api/launch` – create new game
-- `/api/continue` – resume session
-- `/ws/roleplay/{session_id}` – real‑time narrative WebSocket
-- `/ws/memory` – real‑time memory event stream
-- `/api/romance/...` – romance queries
-- `/api/probability/...` – probability queries
-- `/api/maintenance/...` – trigger maintenance
+**Available API Endpoints:**
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/launch` | POST | Create new game session |
+| `/api/continue` | POST | Resume existing session |
+| `/ws/roleplay/{session_id}` | WebSocket | Real-time narrative stream |
+| `/ws/memory` | WebSocket | Real-time memory event feed |
+| `/api/romance/status` | GET | Query romance relationships |
+| `/api/romance/attempt` | POST | Execute romance action |
+| `/api/probability/show` | GET | Get success probabilities |
+| `/api/probability/roll` | POST | Perform probability check |
+| `/api/maintenance/memory` | POST | Trigger memory optimization |
+| `/api/character/{id}` | GET | Retrieve character data |
+| `/api/location/{id}` | GET | Retrieve location data |
+| `/api/quest/active` | GET | List active quests |
+| `/api/timeline` | GET | Get story event log |
+
+**Example API Usage:**
+
+```bash
+# Start a new game via API
+curl -X POST http://localhost:8000/api/launch \
+  -H "Content-Type: application/json" \
+  -d '{"hints": "dwarven cleric", "isekai": false}'
+
+# Query romance status
+curl http://localhost:8000/api/romance/status?character=Kaelen\&target=Elara
+
+# Perform probability check
+curl -X POST http://localhost:8000/api/probability/roll \
+  -H "Content-Type: application/json" \
+  -d '{"character": "Kaelen", "action": "persuade", "target": "Guard"}'
+```
+
+### 📌 Director Configuration
+
+Customize the background story director behavior:
+
+```bash
+# View current director status
+world narrative director-status
+
+# Adjust tick rate (default: 60 real seconds = 30 game minutes)
+# Edit .env: WORLD_DIRECT_TICK_INTERVAL=120
+
+# Force immediate story advancement
+world narrative tick now
+
+# Schedule a custom event
+world narrative schedule villain_event 30 '{"villain":"The Shadow","location":"Dark Tower"}'
+```
+
+**Director Responsibilities:**
+- Advances story time automatically
+- Processes NPC daily routines and interactions
+- Triggers villain plot progression
+- Generates random encounters and events
+- Manages quest updates and completions
+- Evolves the world (new NPCs, locations, items)
+
+### 📌 Debugging & Diagnostics
+
+Tools for troubleshooting and development:
+
+```bash
+# View detailed entity information
+world explore show "Character:Kaelen" --complete
+
+# Trace relationship paths
+world explore path "Kaelen" "Ancient Prophecy" --depth 3
+
+# Check graph health
+world builder validate
+
+# Repair broken relationships
+world builder repair --intelligent --merge --create
+
+# View system performance stats
+world narrative memory-status --verbose
+
+# Export session logs for debugging
+world narrative export-session --format json --output debug_log.json
+```
 
 ---
 

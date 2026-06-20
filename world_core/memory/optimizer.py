@@ -2,7 +2,7 @@
 import asyncio
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Any
 
 if TYPE_CHECKING:
     from .world_memory import WorldMemory, WorldMemoryEntry

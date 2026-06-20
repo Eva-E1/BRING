@@ -81,7 +81,7 @@ template_checks = [
     ('NEW button handler (JS)', "newGameBtn').addEventListener"),
     ('Session URL param', 'urlParams.get'),
     ('Character URL param', 'initialCharacter'),
-    ('Roleplay WebSocket', 'ws/roleplay/'),
+    ('Chat WebSocket', '/chat/ws'),
     ('Launch API call', "/api/launch"),
     ('DOMPurify', 'DOMPurify'),
     ('encodeURIComponent', 'encodeURIComponent'),
