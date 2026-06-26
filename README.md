@@ -80,7 +80,7 @@ All modules share `world_db/` – everything is persistent, atomic, and crash‑
 ### 1. Install & Configure
 
 ```bash
-git clone https://github.com/Eva.E1/BRING.git
+git clone https://github.com/Eva-E1/BRING.git
 cd BRING
 
 # Install dependencies
@@ -860,7 +860,7 @@ We welcome contributions! Please:
 **Development setup:**
 
 ```bash
-git clone https://github.com/Eva.E1/BRING.git
+git clone https://github.com/Eva-E1/BRING.git
 cd BRING
 pip install -r requirements.txt
 pip install faiss-cpu
