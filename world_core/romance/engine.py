@@ -535,7 +535,7 @@ class RomanceEngine:
         templates = {
             "attraction_check": (
                 f"{actor} feels {quality_desc} drawn to {target}. "
-                ('There seems to be a spark between them.' if success else 'Perhaps it just wasn''t meant to be.')
+                + ('There seems to be a spark between them.' if success else 'Perhaps it just wasn\'t meant to be.')
             ),
             "confession": (
                 f"{actor} confesses their feelings to {target} {quality_desc}. "
