@@ -1466,7 +1466,7 @@ def newgame(
     loop.run_until_complete(_run())
 
 
-@app.command()
+@app.command(name="continue")
 def continue_cmd(
     session_id: Optional[str] = typer.Option(None, help="Session ID to resume (omit to list)"),
     port: int = typer.Option(8000, help="Web UI port"),
