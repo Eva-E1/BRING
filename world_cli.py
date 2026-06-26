@@ -62,6 +62,8 @@ MODULES = {
     "romance-attempt": ("world_narrative.cli", "romance_attempt"),
     "romance-list": ("world_narrative.cli", "romance_list"),
     "romance-gift": ("world_narrative.cli", "romance_gift"),
+    "newgame": ("world_narrative.cli", "newgame"),
+    "continue": ("world_narrative.cli", "continue"),
     "serve": ("world_cli", "serve"),
 }
 
