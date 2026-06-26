@@ -907,11 +907,11 @@ body{height:100%;background:var(--black);font-family:var(--font-mono);font-size:
             return '<div class="rel-card">' +
               '<div class="rel-card__names">' + currentCharacter + ' \u21CC ' + (r.partner || '?') + '</div>' +
               '<div class="rel-card__status">' + (r.status || 'unknown') + ' \u00B7 ' + pct + '% affection</div>' +
-              '<div class="seg seg--compact" style="margin-top:4px"><div class="seg__track" id="relSeg_' + (r.partner || 'x').replace(new RegExp('\\\\s','g'),'_') + '"></div></div></div>';
+              '<div class="seg seg--compact" style="margin-top:4px"><div class="seg__track" id="relSeg_' + (r.partner || 'x').replace(/\\s/g,'_') + '"></div></div></div>';
           }).join('');
           // Render seg bars after DOM update
           rels.slice(0, 5).forEach(function(r) {
-            var el = document.getElementById('relSeg_' + (r.partner || 'x').replace(new RegExp('\\\\s','g'), '_'));
+            var el = document.getElementById('relSeg_' + (r.partner || 'x').replace(/\\s/g, '_'));
             if (el) renderSeg(el, (r.affection || 0) * 100, (r.affection || 0) > 0.7 ? 'var(--success)' : 'var(--warning)', 16);
           });
         }).catch(function() { cRelList.innerHTML = '<div style="font-size:10px;color:var(--text-disabled)">Unavailable</div>'; });
@@ -1346,7 +1346,7 @@ body{height:100%;background:var(--black);font-family:var(--font-mono);font-size:
     if (!trimmed) return;
     addMsg('\u25B8 ' + trimmed, 'msg--dim');
     if (trimmed.startsWith('/')) {
-      var parts = trimmed.slice(1).split(/\s+/);
+      var parts = trimmed.slice(1).split(/\\s+/);
       var cmd = parts[0].toLowerCase();
       var args = parts.slice(1);
       switch (cmd) {
